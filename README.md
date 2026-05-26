@@ -7,4 +7,4 @@
 
 # Admin credentials
 - **Username:** `admin`
-- **Password:** `password`
+- **Password:** `Admin@1234`
