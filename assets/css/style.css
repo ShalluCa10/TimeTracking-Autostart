@@ -114,6 +114,60 @@ a:hover { text-decoration: underline; }
 /* Empty state */
 .empty-state { color: #8888aa; padding: 40px 0; text-align: center; }
 
+/* ── Timer ─────────────────────────────────────── */
+.timer-box {
+    background: #1e1e2e;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.timer-display {
+    font-size: 4rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: #a6e3a1;
+    font-family: 'Courier New', monospace;
+    transition: color 0.3s;
+}
+
+.timer-display.timer-danger {
+    color: #f38ba8;
+    animation: pulse 0.8s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.5; }
+}
+
+.timer-controls {
+    margin-top: 16px;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.timer-hint {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.btn-success  { background: #40a02b; color: #fff; }
+.btn-success:hover { background: #2e7d1f; }
+.btn-danger   { background: #d20f39; color: #fff; }
+.btn-danger:hover  { background: #a80028; }
+
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+
+
 /* Footer */
 .footer {
     text-align: center;

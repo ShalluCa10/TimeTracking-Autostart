@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE TABLE IF NOT EXISTS sessions (
     session_id INT NOT NULL AUTO_INCREMENT,
     event_id INT NOT NULL,
+f1_version VARCHAR(50) NULL DEFAULT '',
     participant_name VARCHAR(120) NOT NULL,
     car VARCHAR(100) NOT NULL DEFAULT '',
     track VARCHAR(100) NOT NULL DEFAULT '',

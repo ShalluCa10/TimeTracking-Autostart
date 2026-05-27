@@ -31,8 +31,8 @@ if ($isEdit) {
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $values['event_name'] = trim($_POST['event_name'] ?? '');
     $values['event_date'] = trim($_POST['event_date'] ?? '');
-    $values['location']   = trim($_POST['location']   ?? '');
-    $values['notes']      = trim($_POST['notes']      ?? '');
+    $values['location'] = trim($_POST['location']   ?? '');
+    $values['notes']  = trim($_POST['notes']      ?? '');
 
     if ($values['event_name'] == '') $errors[] = 'Event name is required.';
     if ($values['event_date'] == '') $errors[] = 'Date is required.';

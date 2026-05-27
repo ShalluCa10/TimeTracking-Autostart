@@ -6,8 +6,8 @@ require_once __DIR__ . '/../includes/helpers.php';
 
 requireLogin();
 
-$conn    = getConnection();
-$eventId = (int)($_GET['id'] ?? 0);
+$conn = getConnection();
+$eventId = (int) ($_GET['id'] ?? 0);
 
 // Load event
 $stmt = $conn->prepare('SELECT * FROM events WHERE event_id = ? LIMIT 1');
@@ -29,7 +29,7 @@ $sessions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 $conn->close();
 
-$flash     = getFlash();
+$flash = getFlash();
 $pageTitle = htmlspecialchars($event['event_name']);
 include __DIR__ . '/../includes/header.php';
 ?>
@@ -37,7 +37,9 @@ include __DIR__ . '/../includes/header.php';
 <div class="page-header">
     <a href="dashboard.php" class="back-link">← Back to Events</a>
     <h2><?php echo htmlspecialchars($event['event_name']); ?></h2>
-    <a href="session_form.php?event_id=<?php echo $eventId; ?>" class="btn btn--primary">+ Add Session</a>
+    <a href="session_form.php?event_id=<?php echo $eventId; ?>" class="btn btn--primary">
+        + Add Session</a>
+
 </div>
 
 <p class="event-meta">
@@ -66,26 +68,26 @@ include __DIR__ . '/../includes/header.php';
             </tr>
         </thead>
         <tbody>
-            <?php $rank = 1; foreach ($sessions as $session) { ?>
-            <tr>
-                <td><?php echo $rank++; ?></td>
-                <td><?php echo htmlspecialchars($session['participant_name']); ?></td>
-                <td><?php echo htmlspecialchars($session['car']); ?></td>
-                <td><?php echo htmlspecialchars($session['track']); ?></td>
-                <td><strong><?php echo htmlspecialchars($session['best_lap_time']); ?></strong></td>
-                <td class="actions">
-                    <a href="session_form.php?id=<?php echo $session['session_id']; ?>&event_id=<?php echo $eventId; ?>"
-                       class="btn btn--outline">Edit</a>
-                    <form method="POST" action="session_delete.php" style="display:inline">
-                        <input type="hidden" name="session_id" value="<?php echo $session['session_id']; ?>">
-                        <input type="hidden" name="event_id"   value="<?php echo $eventId; ?>">
-                        <button type="submit" class="btn btn--danger"
-                            onclick="return confirm('Delete this session?')">
-                            Delete
-                        </button>
-                    </form>
-                </td>
-            </tr>
+            <?php $rank = 1;
+            foreach ($sessions as $session) { ?>
+                <tr>
+                    <td><?php echo $rank++; ?></td>
+                    <td><?php echo htmlspecialchars($session['participant_name']); ?></td>
+                    <td><?php echo htmlspecialchars($session['car']); ?></td>
+                    <td><?php echo htmlspecialchars($session['track']); ?></td>
+                    <td><strong><?php echo htmlspecialchars($session['best_lap_time']); ?></strong></td>
+                    <td class="actions">
+                        <a href="session_form.php?id=<?php echo $session['session_id']; ?>&event_id=<?php echo $eventId; ?>"
+                            class="btn btn--outline">Edit</a>
+                        <form method="POST" action="session_delete.php" style="display:inline">
+                            <input type="hidden" name="session_id" value="<?php echo $session['session_id']; ?>">
+                            <input type="hidden" name="event_id" value="<?php echo $eventId; ?>">
+                            <button type="submit" class="btn btn--danger" onclick="return confirm('Delete this session?')">
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
             <?php } ?>
         </tbody>
     </table>
