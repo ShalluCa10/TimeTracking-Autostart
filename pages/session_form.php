@@ -6,28 +6,46 @@ require_once __DIR__ . '/../includes/helpers.php';
 
 requireLogin();
 $conn = getConnection();
+ensureGameTables($conn);
 
-$eventId   = isset($_GET['event_id']) ? (int)$_GET['event_id'] : 0;
-$sessionId = isset($_GET['id'])       ? (int)$_GET['id']       : 0;
+$eventId   = isset($_POST['event_id']) ? (int)$_POST['event_id'] : (int)(isset($_GET['event_id']) ? $_GET['event_id'] : 0);
+$sessionId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $isEdit    = $sessionId > 0;
 
-// Fetch event
-$eventStmt = $conn->prepare("SELECT * FROM events WHERE event_id = ?");
-$eventStmt->bind_param("i", $eventId);
-$eventStmt->execute();
-$event = $eventStmt->get_result()->fetch_assoc();
-
-if (!$event) {
-    header('Location: dashboard.php');
-    exit();
+$events = [];
+$res = $conn->query('SELECT event_id, event_name FROM events ORDER BY event_date DESC');
+if ($res) {
+    $events = $res->fetch_all(MYSQLI_ASSOC);
 }
 
+$event = null;
+$eventDefaults = null;
+$gameName = '';
+$car = '';
+$track = '';
+$driver = '';
+$error = '';
 $participantName = '';
-$bestLapTime     = '';
-$f1Version       = '';
-$car             = '';
-$track           = '';
-$error           = '';
+$bestLapTime = '';
+
+if ($eventId > 0) {
+    $eventStmt = $conn->prepare("SELECT * FROM events WHERE event_id = ?");
+    $eventStmt->bind_param("i", $eventId);
+    $eventStmt->execute();
+    $event = $eventStmt->get_result()->fetch_assoc();
+    $eventStmt->close();
+
+    if ($event) {
+        $eventDefaults = getEventGameDefaults($conn, $eventId);
+        if ($eventDefaults) {
+            $game = getGameItemById($conn, 'games', 'game_id', $eventDefaults['game_id']);
+            $gameName = $game['name'] ?? '';
+            $car = getGameItemById($conn, 'game_cars', 'car_id', $eventDefaults['car_id'])['name'] ?? '';
+            $track = getGameItemById($conn, 'game_tracks', 'track_id', $eventDefaults['track_id'])['name'] ?? '';
+            $driver = getGameItemById($conn, 'game_drivers', 'driver_id', $eventDefaults['driver_id'])['name'] ?? '';
+        }
+    }
+}
 
 if ($isEdit) {
     $stmt = $conn->prepare("SELECT * FROM sessions WHERE session_id = ?");
@@ -36,33 +54,43 @@ if ($isEdit) {
     $session = $stmt->get_result()->fetch_assoc();
     if ($session) {
         $participantName = $session['participant_name'];
-        $bestLapTime     = $session['best_lap_time'];
-        $f1Version       = $session['f1_version'];
-        $car             = $session['car'];
-        $track           = $session['track'];
+        $bestLapTime = $session['best_lap_time'];
+        $eventId = $session['event_id'];
     }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $participantName = trim($_POST['participant_name'] ?? '');
     $bestLapTime = trim($_POST['best_lap_time'] ?? '');
-    $f1Version = trim($_POST['f1_version']  ?? '');
-    $car = trim($_POST['car'] ?? '');
-    $track = trim($_POST['track'] ?? '');
+    $eventId = (int) ($_POST['event_id'] ?? $eventId);
 
     if (empty($participantName)) {
         $error = 'Participant name is required.';
+    } elseif ($eventId === 0) {
+        $error = 'Please select an event.';
     } else {
-        if ($isEdit) {
-            $stmt = $conn->prepare("UPDATE sessions SET participant_name = ?, best_lap_time = ?, f1_version = ?, car = ?, track = ? WHERE session_id = ?");
-            $stmt->bind_param("sssssi", $participantName, $bestLapTime, $f1Version, $car, $track, $sessionId);
+        $eventDefaults = getEventGameDefaults($conn, $eventId);
+        if (!$eventDefaults) {
+            $error = 'Selected event does not have game settings configured.';
         } else {
-            $stmt = $conn->prepare("INSERT INTO sessions (event_id, participant_name, best_lap_time, f1_version, car, track) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("isssss", $eventId, $participantName, $bestLapTime, $f1Version, $car, $track);
+            $game = getGameItemById($conn, 'games', 'game_id', $eventDefaults['game_id']);
+            $gameName = $game['name'] ?? '';
+            $car = getGameItemById($conn, 'game_cars', 'car_id', $eventDefaults['car_id'])['name'] ?? '';
+            $track = getGameItemById($conn, 'game_tracks', 'track_id', $eventDefaults['track_id'])['name'] ?? '';
+            $driver = getGameItemById($conn, 'game_drivers', 'driver_id', $eventDefaults['driver_id'])['name'] ?? '';
+
+            if ($isEdit) {
+                $stmt = $conn->prepare("UPDATE sessions SET participant_name = ?, best_lap_time = ? WHERE session_id = ?");
+                $stmt->bind_param("ssi", $participantName, $bestLapTime, $sessionId);
+            } else {
+                $stmt = $conn->prepare("INSERT INTO sessions (event_id, participant_name, best_lap_time, f1_version, car, track) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param("isssss", $eventId, $participantName, $bestLapTime, $gameName, $car, $track);
+            }
+            $stmt->execute();
+            $stmt->close();
+            header('Location: event_detail.php?id=' . $eventId . '&success=1');
+            exit();
         }
-        $stmt->execute();
-        header('Location: event_detail.php?id=' . $eventId . '&success=1');
-        exit();
     }
 }
 
@@ -72,34 +100,41 @@ include __DIR__ . '/../includes/header.php';
 
 <div class="container">
     <h2><?= $isEdit ? 'Edit Session' : 'Add Session' ?></h2>
-    <p>Event: <strong><?= htmlspecialchars($event['event_name']) ?></strong></p>
 
     <?php if ($error): ?>
         <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
     <form method="POST" id="sessionForm">
+        <?php if (!$isEdit): ?>
+            <div class="form-group">
+                <label for="event_id">Event</label>
+                <select id="event_id" name="event_id" required onchange="window.location.href='session_form.php?event_id=' + this.value;">
+                    <option value="">Select event</option>
+                    <?php foreach ($events as $ev): ?>
+                        <option value="<?= $ev['event_id'] ?>" <?= ($ev['event_id'] == $eventId) ? 'selected' : '' ?>><?= htmlspecialchars($ev['event_name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php if ($event): ?>
+                <div class="form-group readonly-field">
+                    <strong>Game:</strong> <?= htmlspecialchars($gameName) ?><br>
+                    <strong>Car:</strong> <?= htmlspecialchars($car) ?><br>
+                    <strong>Track:</strong> <?= htmlspecialchars($track) ?><br>
+                    <strong>Driver:</strong> <?= htmlspecialchars($driver) ?>
+                </div>
+            <?php endif; ?>
+        <?php else: ?>
+            <p>Event: <strong><?= htmlspecialchars($event['event_name'] ?? '') ?></strong></p>
+            <div class="form-group readonly-field">
+                <strong>Game:</strong> <?= htmlspecialchars($gameName) ?><br>
+                <strong>Car:</strong> <?= htmlspecialchars($car) ?><br>
+                <strong>Track:</strong> <?= htmlspecialchars($track) ?><br>
+                <strong>Driver:</strong> <?= htmlspecialchars($driver) ?>
+            </div>
+        <?php endif; ?>
 
-        <div class="form-group">
-            <label for="f1_version">F1 Version</label>
-            <input type="text" id="f1_version" name="f1_version"
-                   value="<?= htmlspecialchars($f1Version) ?>"
-                   placeholder="e.g. F1 24">
-        </div>
-
-        <div class="form-group">
-            <label for="car">Car</label>
-            <input type="text" id="car" name="car"
-                   value="<?= htmlspecialchars($car) ?>"
-                   placeholder="e.g. Red Bull RB20">
-        </div>
-
-        <div class="form-group">
-            <label for="track">Track</label>
-            <input type="text" id="track" name="track"
-                   value="<?= htmlspecialchars($track) ?>"
-                   placeholder="e.g. Silverstone">
-        </div>
+        <input type="hidden" name="event_id" value="<?= htmlspecialchars($eventId) ?>">
 
         <div class="form-group">
             <label for="participant_name">Participant Name</label>

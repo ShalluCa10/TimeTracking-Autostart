@@ -37,8 +37,10 @@ include __DIR__ . '/../includes/header.php';
 <div class="page-header">
     <a href="dashboard.php" class="back-link">← Back to Events</a>
     <h2><?php echo htmlspecialchars($event['event_name']); ?></h2>
-    <a href="session_form.php?event_id=<?php echo $eventId; ?>" class="btn btn--primary">
-        + Add Session</a>
+    <div class="event-actions">
+        <a href="session_form.php?event_id=<?php echo $eventId; ?>" class="btn btn--primary">+ Add Session</a>
+        <a href="simulation.php?event_id=<?php echo $eventId; ?>" class="btn btn--success">Start Simulation</a>
+    </div>
 
 </div>
 
@@ -60,7 +62,8 @@ include __DIR__ . '/../includes/header.php';
         <thead>
             <tr>
                 <th>#</th>
-                <th>Participant</th>
+                <th>Game</th>
+                <th>Driver</th>
                 <th>Car</th>
                 <th>Track</th>
                 <th>Best Lap</th>
@@ -72,6 +75,7 @@ include __DIR__ . '/../includes/header.php';
             foreach ($sessions as $session) { ?>
                 <tr>
                     <td><?php echo $rank++; ?></td>
+                    <td><?php echo htmlspecialchars($session['f1_version']); ?></td>
                     <td><?php echo htmlspecialchars($session['participant_name']); ?></td>
                     <td><?php echo htmlspecialchars($session['car']); ?></td>
                     <td><?php echo htmlspecialchars($session['track']); ?></td>

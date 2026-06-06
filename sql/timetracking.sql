@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE TABLE IF NOT EXISTS sessions (
     session_id INT NOT NULL AUTO_INCREMENT,
     event_id INT NOT NULL,
-f1_version VARCHAR(50) NULL DEFAULT '',
+    f1_version VARCHAR(50) NULL DEFAULT '',
     participant_name VARCHAR(120) NOT NULL,
     car VARCHAR(100) NOT NULL DEFAULT '',
     track VARCHAR(100) NOT NULL DEFAULT '',
@@ -35,8 +35,18 @@ f1_version VARCHAR(50) NULL DEFAULT '',
     FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Default admin: username=admin password=password123
-INSERT INTO admins (username, password_hash) VALUES (
+CREATE TABLE laps (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    session_id  INT            NOT NULL,
+    lap_number  INT            NOT NULL,
+    lap_time_ms INT            NOT NULL,
+    lap_time    VARCHAR(20)    NOT NULL,
+    created_at  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+);
+
+INSERT IGNORE INTO admins (username, password_hash) VALUES (
     'admin',
     '$2y$10$rYZmutKCCrRRSHMoh8tDm.kailq7qDx.uvsB8G/NBL39UZnHADN7m'
 );

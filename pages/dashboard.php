@@ -20,6 +20,9 @@ include __DIR__ . '/../includes/header.php';
     <h2>Events</h2>
     <a href="event_form.php" class="btn btn--primary">+ New Event</a>
 </div>
+<div class="dashboard-intro">
+    <p>Game Manager: create events, choose a track, car and F1 version for each session, then start simulations directly from an event.</p>
+</div>
 
 <?php if ($flash) { ?>
     <p class="alert alert--<?php echo $flash['type']; ?>"><?php echo $flash['message']; ?></p>

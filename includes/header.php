@@ -14,6 +14,7 @@
 <div class="topbar">
     <span class="topbar__brand"><?php echo APP_NAME; ?></span>
     <div class="topbar__nav">
+        <a href="<?php echo BASE_URL; ?>/../pages/manage_games.php" class="topbar__link">Manage Game</a>
         <span class="topbar__user">
             Hi, <?php echo htmlspecialchars($_SESSION['username'] ?? 'Admin'); ?>
         </span>
