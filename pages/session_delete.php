@@ -1,5 +1,4 @@
 <?php
-require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/helpers.php';
@@ -12,8 +11,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $sessionId = (int) ($_POST['session_id'] ?? 0);
-$eventId   = (int) ($_POST['event_id']   ?? 0);
-$from      = trim($_POST['from']         ?? '');
 
 if ($sessionId === 0) {
     header('Location: dashboard.php');
@@ -29,10 +26,13 @@ $conn->close();
 
 setFlash('success', 'Session deleted.');
 
-if ($from === 'sessions') {
-    header('Location: sessions.php');
-} elseif ($eventId > 0) {
-    header('Location: event_detail.php?id=' . $eventId);
+$redirect = trim($_POST['redirect'] ?? '');
+
+$allowed = ['dashboard.php', 'sessions.php', 'manage_events.php'];
+$base    = strtok($redirect, '?');
+
+if (in_array($base, $allowed) && $redirect === strip_tags($redirect)) {
+    header('Location: ' . $redirect);
 } else {
     header('Location: dashboard.php');
 }

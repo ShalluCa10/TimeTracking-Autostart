@@ -16,10 +16,10 @@ if (!defined('APP_NAME')) define('APP_NAME', 'F1 Lap Simulator');
     <span class="topbar__brand"><?= APP_NAME ?></span>
 
     <div class="topbar__nav">
-        <a href="/pages/dashboard.php"    class="topbar__link">Dashboard</a>
-        <a href="/pages/sessions.php"     class="topbar__link">Sessions</a>
-        <a href="/pages/simulation.php"   class="topbar__link">Simulator</a>
-        <a href="/pages/manage_games.php" class="topbar__link">Manage Game</a>
+        <a href="/pages/dashboard.php"      class="topbar__link">Dashboard</a>
+        <a href="/pages/manage_events.php"  class="topbar__link">Manage Events</a>
+        <a href="/pages/simulation.php"     class="topbar__link">Simulator</a>
+        <a href="/pages/manage_games.php"   class="topbar__link">Manage Game</a>
     </div>
 
     <div class="topbar__right">
