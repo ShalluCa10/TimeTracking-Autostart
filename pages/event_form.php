@@ -22,11 +22,9 @@ $values  = [
     'status'     => 'auto',
 ];
 
-// ── Load all game versions ─────────────────────────────────
 $versions = $conn->query('SELECT id, name FROM game_versions ORDER BY name ASC')
                  ->fetch_all(MYSQLI_ASSOC);
 
-// ── Load existing event if editing ────────────────────────
 if ($isEdit) {
     $stmt = $conn->prepare('SELECT * FROM events WHERE event_id = ? LIMIT 1');
     $stmt->bind_param('i', $eventId);
@@ -43,7 +41,6 @@ if ($isEdit) {
     $values = array_merge($values, $event);
 }
 
-// ── Pre-load cars/tracks/racers if version already known ──
 $cars = $tracks = $racers = [];
 $selectedVersion = (int) ($values['version_id'] ?? 0);
 
@@ -67,7 +64,6 @@ if ($selectedVersion > 0) {
     $stmt->close();
 }
 
-// ── Handle POST ───────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $values['event_name'] = trim($_POST['event_name'] ?? '');
     $values['event_date'] = trim($_POST['event_date'] ?? '');
@@ -134,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->close();
         $conn->close();
 
-        setFlash('success', $isEdit ? 'Event updated.' : 'Event created.');
+        $_SESSION['flash'] = ['type' => 'success', 'message' => $isEdit ? 'Event updated.' : 'Event created.'];
         header('Location: dashboard.php');
         exit();
     }
@@ -146,139 +142,156 @@ $pageTitle = $isEdit ? 'Edit Event' : 'New Event';
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<div class="form-page-header">
-    <a href="dashboard.php" class="back-link">← Back to Dashboard</a>
+<!-- Page Header -->
+<div class="page-header">
     <h2><?= $pageTitle ?></h2>
+    <a href="dashboard.php" class="btn btn-secondary">← Back</a>
 </div>
 
+<!-- Errors -->
 <?php if (!empty($errors)): ?>
-    <div class="alert alert--danger" style="max-width:720px;margin:0 auto 20px;">
-        <?php foreach ($errors as $err): ?>
-            <p><?= htmlspecialchars($err) ?></p>
-        <?php endforeach; ?>
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8 col-xl-7">
+            <div class="alert alert-danger mb-4">
+                <?php foreach ($errors as $err): ?>
+                    <p class="mb-1"><?= htmlspecialchars($err) ?></p>
+                <?php endforeach; ?>
+            </div>
+        </div>
     </div>
 <?php endif; ?>
 
-<form method="POST" class="form-card">
+<!-- Form -->
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8 col-xl-7">
+        <div class="card">
+            <div class="card-body p-4">
+                <form method="POST">
 
-    <div class="form-row">
-        <div class="form-group">
-            <label for="event_name">Event Name <span class="required">*</span></label>
-            <input type="text" id="event_name" name="event_name"
-                   value="<?= htmlspecialchars($values['event_name']) ?>"
-                   required autofocus placeholder="e.g. Monaco GP Night">
-        </div>
-        <div class="form-group">
-            <label for="event_date">Date <span class="required">*</span></label>
-            <input type="date" id="event_date" name="event_date"
-                   value="<?= htmlspecialchars($values['event_date']) ?>" required>
-        </div>
-    </div>
+                    <!-- Event Name + Date -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label for="event_name" class="form-label">Event Name <span class="text-danger">*</span></label>
+                            <input type="text" id="event_name" name="event_name" class="form-control"
+                                   value="<?= htmlspecialchars($values['event_name']) ?>"
+                                   required autofocus placeholder="e.g. Monaco GP Night">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="event_date" class="form-label">Date <span class="text-danger">*</span></label>
+                            <input type="date" id="event_date" name="event_date" class="form-control"
+                                   value="<?= htmlspecialchars($values['event_date']) ?>" required>
+                        </div>
+                    </div>
 
-    <div class="form-group">
-        <label for="location">Location</label>
-        <input type="text" id="location" name="location"
-               value="<?= htmlspecialchars($values['location']) ?>"
-               placeholder="e.g. Montreal, QC">
-    </div>
+                    <!-- Location -->
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Location</label>
+                        <input type="text" id="location" name="location" class="form-control"
+                               value="<?= htmlspecialchars($values['location']) ?>"
+                               placeholder="e.g. Montreal, QC">
+                    </div>
 
-    <!-- Game Setup -->
-    <div class="form-section">
-        <div class="form-section__label">Game Setup</div>
+                    <!-- Game Setup -->
+                    <div class="mb-1 mt-4">
+                        <span class="form-section__label">Game Setup</span>
+                    </div>
 
-        <div class="form-group">
-            <label for="sel-version">Game Version <span class="required">*</span></label>
-            <select id="sel-version" name="version_id" required>
-                <option value="">— Select Version —</option>
-                <?php foreach ($versions as $v): ?>
-                    <option value="<?= $v['id'] ?>"
-                            data-id="<?= $v['id'] ?>"
-                        <?= (int)$values['version_id'] === $v['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($v['name']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </div>
+                    <div class="mb-3">
+                        <label for="sel-version" class="form-label">Game Version <span class="text-danger">*</span></label>
+                        <select id="sel-version" name="version_id" class="form-select" required>
+                            <option value="">— Select Version —</option>
+                            <?php foreach ($versions as $v): ?>
+                                <option value="<?= $v['id'] ?>"
+                                    <?= (int) $values['version_id'] === $v['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($v['name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
 
-        <div class="form-row">
-            <div class="form-group">
-                <label for="sel-track">Track <span class="required">*</span></label>
-                <select id="sel-track" name="track" required
-                        <?= $selectedVersion === 0 ? 'disabled' : '' ?>>
-                    <option value="">— Select Version First —</option>
-                    <?php foreach ($tracks as $t): ?>
-                        <option value="<?= htmlspecialchars($t['name']) ?>"
-                            <?= $values['track'] === $t['name'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($t['name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="sel-track" class="form-label">Track <span class="text-danger">*</span></label>
+                            <select id="sel-track" name="track" class="form-select" required
+                                    <?= $selectedVersion === 0 ? 'disabled' : '' ?>>
+                                <option value="">— Select Version First —</option>
+                                <?php foreach ($tracks as $t): ?>
+                                    <option value="<?= htmlspecialchars($t['name']) ?>"
+                                        <?= $values['track'] === $t['name'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($t['name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="sel-car" class="form-label">Car <span class="text-danger">*</span></label>
+                            <select id="sel-car" name="car" class="form-select" required
+                                    <?= $selectedVersion === 0 ? 'disabled' : '' ?>>
+                                <option value="">— Select Version First —</option>
+                                <?php foreach ($cars as $c): ?>
+                                    <option value="<?= htmlspecialchars($c['name']) ?>"
+                                        <?= $values['car'] === $c['name'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($c['name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="sel-racer" class="form-label">Racer <span class="text-danger">*</span></label>
+                        <select id="sel-racer" name="racer" class="form-select" required
+                                <?= $selectedVersion === 0 ? 'disabled' : '' ?>>
+                            <option value="">— Select Version First —</option>
+                            <?php foreach ($racers as $r): ?>
+                                <option value="<?= htmlspecialchars($r['name']) ?>"
+                                    <?= $values['racer'] === $r['name'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($r['name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <!-- Status (edit only) -->
+                    <?php if ($isEdit): ?>
+                        <div class="mb-1 mt-4">
+                            <span class="form-section__label">Event Status</span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="sel-status" class="form-label">Status <span class="text-danger">*</span></label>
+                            <select id="sel-status" name="status" class="form-select" required>
+                                <option value="auto"      <?= $values['status'] === 'auto'      ? 'selected' : '' ?>>Upcoming</option>
+                                <option value="live"      <?= $values['status'] === 'live'      ? 'selected' : '' ?>>Live</option>
+                                <option value="completed" <?= $values['status'] === 'completed' ? 'selected' : '' ?>>Completed</option>
+                                <option value="canceled"  <?= $values['status'] === 'canceled'  ? 'selected' : '' ?>>Canceled</option>
+                            </select>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Notes -->
+                    <div class="mb-4">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea id="notes" name="notes" class="form-control" rows="3"
+                                  placeholder="Any extra details..."><?= htmlspecialchars($values['notes']) ?></textarea>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <?= $isEdit ? 'Save Changes' : 'Create Event' ?>
+                        </button>
+                        <a href="dashboard.php" class="btn btn-secondary">Cancel</a>
+                    </div>
+
+                </form>
             </div>
-            <div class="form-group">
-                <label for="sel-car">Car <span class="required">*</span></label>
-                <select id="sel-car" name="car" required
-                        <?= $selectedVersion === 0 ? 'disabled' : '' ?>>
-                    <option value="">— Select Version First —</option>
-                    <?php foreach ($cars as $c): ?>
-                        <option value="<?= htmlspecialchars($c['name']) ?>"
-                            <?= $values['car'] === $c['name'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($c['name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label for="sel-racer">Racer <span class="required">*</span></label>
-            <select id="sel-racer" name="racer" required
-                    <?= $selectedVersion === 0 ? 'disabled' : '' ?>>
-                <option value="">— Select Version First —</option>
-                <?php foreach ($racers as $r): ?>
-                    <option value="<?= htmlspecialchars($r['name']) ?>"
-                        <?= $values['racer'] === $r['name'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($r['name']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
         </div>
     </div>
-
-    <!-- Status (edit only) -->
-    <?php if ($isEdit): ?>
-    <div class="form-section">
-        <div class="form-section__label">Event Status</div>
-
-        <div class="form-group">
-            <label for="sel-status">Status <span class="required">*</span></label>
-            <select id="sel-status" name="status" required>
-                <option value="auto"      <?= $values['status'] === 'auto'      ? 'selected' : '' ?>>Upcoming</option>
-                <option value="live"      <?= $values['status'] === 'live'      ? 'selected' : '' ?>>Live</option>
-                <option value="completed" <?= $values['status'] === 'completed' ? 'selected' : '' ?>>Completed</option>
-                <option value="canceled"  <?= $values['status'] === 'canceled'  ? 'selected' : '' ?>>Canceled</option>
-            </select>
-        </div>
-    </div>
-    <?php endif; ?>
-
-    <!-- Notes -->
-    <div class="form-group">
-        <label for="notes">Notes</label>
-        <textarea id="notes" name="notes" rows="3"
-                  placeholder="Any extra details..."><?= htmlspecialchars($values['notes']) ?></textarea>
-    </div>
-
-    <div class="form-actions">
-        <button type="submit" class="btn btn--primary">
-            <?= $isEdit ? 'Save Changes' : 'Create Event' ?>
-        </button>
-        <a href="dashboard.php" class="btn btn--outline">Cancel</a>
-    </div>
-
-</form>
+</div>
 
 <script>
-    const APP_BASE = "<?= rtrim(str_replace($_SERVER['DOCUMENT_ROOT'], '', __DIR__ . '/..'), '/') ?>";
+const APP_BASE = "<?= rtrim(str_replace($_SERVER['DOCUMENT_ROOT'], '', __DIR__ . '/..'), '/') ?>";
 </script>
 
 <script>
@@ -333,7 +346,7 @@ include __DIR__ . '/../includes/header.php';
         } catch (e) {
             console.error('get_options failed:', e);
             resetSelect(selTrack, '— Error loading —');
-            resetSelect(selCar, '— Error loading —');
+            resetSelect(selCar,   '— Error loading —');
             resetSelect(selRacer, '— Error loading —');
         }
     }
@@ -342,9 +355,9 @@ include __DIR__ . '/../includes/header.php';
         if (this.value) {
             loadOptions(this.value);
         } else {
-            resetSelect(selTrack,  '— Select Version First —');
-            resetSelect(selCar,    '— Select Version First —');
-            resetSelect(selRacer,  '— Select Version First —');
+            resetSelect(selTrack, '— Select Version First —');
+            resetSelect(selCar,   '— Select Version First —');
+            resetSelect(selRacer, '— Select Version First —');
         }
     });
 

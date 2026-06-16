@@ -1,25 +1,17 @@
-/* ── Reset global app styles for simulation page ── */
-body {
-    background-color: #0a0a0f !important;
-    color: #ffffff !important;
-    font-family: 'Orbitron', sans-serif !important;
-}
-
-/* Hide the global app navbar/header if it's interfering */
-.sim-wrapper * {
-    box-sizing: border-box;
-}
+/* ══════════════════════════════════════════
+   F1 Lap Simulator — Simulation Page Styles
+   ══════════════════════════════════════════ */
 
 .sim-wrapper {
     max-width: 800px;
-    margin: 60px auto;
+    margin: 0 auto;
     padding: 0 20px;
     text-align: center;
 }
 
 .sim-title {
     font-size: 1.6rem;
-    color: #00ff88;
+    color: #e10600;
     letter-spacing: 3px;
     margin-bottom: 6px;
     font-family: 'Orbitron', sans-serif;
@@ -29,20 +21,10 @@ body {
     color: #555;
     font-size: 0.75rem;
     margin-bottom: 50px;
-    font-family: sans-serif;
+    font-family: 'Inter', sans-serif;
 }
 
-/* ── Pre-sim card ── */
-.sim-pre__card {
-    background: #111118;
-    border: 1px solid #1e1e2e;
-    border-radius: 12px;
-    padding: 32px;
-    max-width: 480px;
-    margin: 0 auto;
-    text-align: left;
-}
-
+/* ── Event Selector ── */
 .sim-pre__group {
     margin-bottom: 20px;
 }
@@ -53,11 +35,13 @@ body {
     color: #555;
     letter-spacing: 2px;
     margin-bottom: 8px;
-    font-family: sans-serif;
+    font-family: 'Inter', sans-serif;
 }
 
-.sim-pre__group select {
+.sim-pre__group select,
+#sel-event {
     width: 100%;
+    max-width: 480px;
     background: #0a0a0f;
     color: #fff;
     border: 1px solid #2a2a3a;
@@ -71,7 +55,8 @@ body {
     background: #0a0a0f;
     border-radius: 8px;
     padding: 16px;
-    margin-bottom: 20px;
+    margin: 12px auto 20px;
+    max-width: 480px;
 }
 
 .sim-pre__detail {
@@ -80,7 +65,7 @@ body {
     font-size: 0.78rem;
     padding: 6px 0;
     border-bottom: 1px solid #1e1e2e;
-    font-family: sans-serif;
+    font-family: 'Inter', sans-serif;
 }
 
 .sim-pre__detail:last-child { border-bottom: none; }
@@ -89,12 +74,12 @@ body {
 
 .sim-empty {
     color: #555;
-    font-family: sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 0.85rem;
     margin-top: 40px;
 }
 
-.sim-empty a { color: #00ff88; }
+.sim-empty a { color: #e10600; }
 
 /* ── Track line ── */
 .track-line-wrapper {
@@ -117,7 +102,7 @@ body {
     position: absolute;
     font-size: 0.65rem;
     color: #555;
-    font-family: sans-serif;
+    font-family: 'Inter', sans-serif;
     white-space: nowrap;
 }
 
@@ -163,7 +148,7 @@ body {
     font-size: 0.85rem;
     color: #555;
     margin-bottom: 30px;
-    font-family: sans-serif;
+    font-family: 'Inter', sans-serif;
 }
 
 /* ── Buttons ── */
@@ -187,9 +172,9 @@ body {
 }
 
 .btn-sim:disabled { opacity: 0.3 !important; cursor: not-allowed !important; }
-.btn-start { background: #00ff88 !important; color: #000 !important; }
-.btn-lap { background: #1a1a2e !important; color: #00ff88 !important; border: 1px solid #00ff88 !important; }
-.btn-end { background: #ff4444 !important; color: #fff !important; }
+.btn-start { background: #e10600 !important; color: #fff !important; }
+.btn-lap   { background: #1a1a2e !important; color: #00ff88 !important; border: 1px solid #00ff88 !important; }
+.btn-end   { background: #333 !important;    color: #fff !important; }
 
 /* ── Lap list ── */
 .lap-list {
@@ -203,7 +188,7 @@ body {
     color: #555;
     letter-spacing: 2px;
     margin-bottom: 12px;
-    font-family: sans-serif;
+    font-family: 'Inter', sans-serif;
     font-weight: normal;
 }
 
@@ -218,7 +203,7 @@ body {
     font-size: 0.85rem;
 }
 
-.lap-item .lap-num  { color: #555; font-family: sans-serif; }
-.lap-item .lap-time { color: #00ff88; }
+.lap-item .lap-num  { color: #555; font-family: 'Inter', sans-serif; }
+.lap-item .lap-time { color: #00ff88; font-family: 'Orbitron', sans-serif; }
 .lap-item.best { border-left-color: #ffd700; }
 .lap-item.best .lap-time { color: #ffd700; }

@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/helpers.php';
 
 requireLogin();
 
@@ -18,12 +19,13 @@ $events = $conn->query('
 
 $conn->close();
 
-$pageTitle = 'Simulatior';
+$pageTitle = 'Simulator';
 include __DIR__ . '/../includes/header.php';
 ?>
-<link rel="stylesheet" href="../assets/css/simulation.css">
 
-<div class="sim-wrapper">
+<link rel="stylesheet" href="/assets/css/simulation.css">
+
+<div class="sim-wrapper py-4">
 
     <h1 class="sim-title">F1 LAP SIMULATOR</h1>
     <p class="sim-subtitle" id="simSubtitle">
@@ -34,13 +36,13 @@ include __DIR__ . '/../includes/header.php';
     <?php if ($sessionId === 0): ?>
     <div id="event-selector" style="margin-bottom: 40px;">
 
-        <div class="form-group">
-            <label for="sel-event">Select Event</label>
-            <select id="sel-event" class="form-control">
+        <div class="sim-pre__group">
+            <label for="sel-event">SELECT EVENT</label>
+            <select id="sel-event">
                 <option value="">— Select Event —</option>
                 <?php foreach ($events as $ev): ?>
                     <option value="<?= $ev['event_id'] ?>"
-                            data-car="<?= htmlspecialchars($ev['car']   ?? '') ?>"
+                            data-car="<?= htmlspecialchars($ev['car']     ?? '') ?>"
                             data-track="<?= htmlspecialchars($ev['track'] ?? '') ?>"
                             data-racer="<?= htmlspecialchars($ev['racer'] ?? '') ?>"
                             data-name="<?= htmlspecialchars($ev['event_name']) ?>">
@@ -51,19 +53,22 @@ include __DIR__ . '/../includes/header.php';
         </div>
 
         <!-- Event preview -->
-        <div id="event-preview" style="display:none; margin: 12px 0 16px;">
-            <table class="table" style="max-width:400px;">
-                <tr><td style="color:#8888aa;">🚗 Car</td>   <td id="prev-car">—</td></tr>
-                <tr><td style="color:#8888aa;">🏁 Track</td> <td id="prev-track">—</td></tr>
-                <tr><td style="color:#8888aa;">👤 Racer</td> <td id="prev-racer">—</td></tr>
-            </table>
+        <div id="event-preview" class="sim-pre__preview" style="display:none;">
+            <div class="sim-pre__detail"><span>Car</span>   <strong id="prev-car">—</strong></div>
+            <div class="sim-pre__detail"><span>Track</span> <strong id="prev-track">—</strong></div>
+            <div class="sim-pre__detail"><span>Racer</span> <strong id="prev-racer">—</strong></div>
         </div>
 
-        <p id="selector-status" style="font-size:0.8rem; min-height:1.2em; color:#8888aa;"></p>
+        <p id="selector-status" style="font-size:0.8rem; min-height:1.2em; color:#8888aa; margin-bottom:0;"></p>
+
     </div>
     <?php endif; ?>
 
-    <!-- Track -->
+    <?php if (empty($events)): ?>
+        <p class="sim-empty">No events found. <a href="/pages/manage_events.php">Create one first.</a></p>
+    <?php endif; ?>
+
+    <!-- ── Track ── -->
     <div class="track-line-wrapper">
         <span class="flag start">START</span>
         <span class="flag finish">FINISH</span>
@@ -73,18 +78,18 @@ include __DIR__ . '/../includes/header.php';
         </div>
     </div>
 
-    <!-- Timer -->
+    <!-- ── Timer ── -->
     <div class="timer-display" id="timerDisplay">00:00</div>
     <div class="lap-counter" id="lapCounter">LAP 0</div>
 
-    <!-- Buttons -->
+    <!-- ── Buttons ── -->
     <div class="sim-controls">
-        <button class="btn-sim btn-start" id="startBtn" <?= $sessionId === 0 ? 'disabled' : '' ?>>START</button>
-        <button id="btn-complete-lap" disabled>COMPLETE LAP</button>
-        <button class="btn-sim btn-end" id="endBtn" disabled>END SESSION</button>
+        <button class="btn-sim btn-start" id="startBtn"         <?= $sessionId === 0 ? 'disabled' : '' ?>>START</button>
+        <button class="btn-sim btn-lap"   id="btn-complete-lap" disabled>COMPLETE LAP</button>
+        <button class="btn-sim btn-end"   id="endBtn"           disabled>END SESSION</button>
     </div>
 
-    <!-- Lap list -->
+    <!-- ── Lap list ── -->
     <div class="lap-list">
         <h3>LAP TIMES</h3>
         <div id="lapList"></div>
@@ -93,19 +98,17 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
-// Event selector — creates session then unlocks START
 (function () {
-    const sel    = document.getElementById('sel-event');
-    const btn    = document.getElementById('startBtn');
-    const status = document.getElementById('selector-status');
+    const sel          = document.getElementById('sel-event');
+    const btn          = document.getElementById('startBtn');
+    const status       = document.getElementById('selector-status');
     const preview      = document.getElementById('event-preview');
     const prevCar      = document.getElementById('prev-car');
     const prevTrack    = document.getElementById('prev-track');
     const prevRacer    = document.getElementById('prev-racer');
     const simSubtitle  = document.getElementById('simSubtitle');
-    const eventSelector = document.getElementById('event-selector');
 
-    if (!sel) return; // already have a session_id, skip
+    if (!sel) return;
 
     sel.addEventListener('change', async function () {
         const opt = this.options[this.selectedIndex];
@@ -126,7 +129,7 @@ include __DIR__ . '/../includes/header.php';
         status.textContent = 'Creating session…';
 
         try {
-            const res  = await fetch('../api/create_session.php', {
+            const res  = await fetch('/api/create_session.php', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body:    JSON.stringify({ event_id: parseInt(this.value) }),
@@ -134,7 +137,6 @@ include __DIR__ . '/../includes/header.php';
             const data = await res.json();
 
             if (data.session_id) {
-                
                 history.replaceState(null, '', '?session_id=' + data.session_id);
 
                 status.textContent = '✅ Session #' + data.session_id + ' ready — press START';
@@ -155,6 +157,6 @@ include __DIR__ . '/../includes/header.php';
 })();
 </script>
 
-<script src="../assets/js/simulation.js"></script>
+<script src="/assets/js/simulation.js"></script>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
