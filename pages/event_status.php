@@ -17,7 +17,7 @@ if (!in_array($redirect, $allowed_redirects)) {
     $redirect = 'dashboard.php';
 }
 
-if ($id && in_array($status, ['auto', 'live', 'canceled', 'completed'])) {
+if ($id && in_array($status, ['auto', 'live', 'completed'])) {
     $conn = getConnection();
     $stmt = $conn->prepare('UPDATE events SET status = ? WHERE event_id = ?');
     $stmt->bind_param('si', $status, $id);

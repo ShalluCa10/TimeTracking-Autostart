@@ -94,7 +94,12 @@ include __DIR__ . '/../includes/header.php';
                         <td><?= htmlspecialchars($event['track'] ?? '—') ?></td>
                         <td><?= htmlspecialchars($event['racer'] ?? '—') ?></td>
                         <td><?= (int) $event['session_count'] ?></td>
-                        <td><span class="badge <?= $statusClass ?>"><?= $statusLabel ?></span></td>
+                        <td>
+                            <span class="status-badge status-<?= $statusKey ?>">
+                                <span class="status-dot"></span>
+                                <?= $statusLabel ?>
+                            </span>
+                        </td>
                         <td>
                             <div class="d-flex flex-wrap gap-1">
 
@@ -113,16 +118,6 @@ include __DIR__ . '/../includes/header.php';
                                         <input type="hidden" name="status" value="live">
                                         <button type="submit" class="btn btn-secondary btn-sm">Force Live</button>
                                     </form>
-                                <?php endif; ?>
-
-                                <?php if ($statusKey !== 'canceled' && $statusKey !== 'completed'): ?>
-                                    <form method="POST" action="event_status.php" onsubmit="return confirm('Cancel this event?')">
-                                        <input type="hidden" name="event_id" value="<?= $event['event_id'] ?>">
-                                        <input type="hidden" name="status" value="canceled">
-                                        <button type="submit" class="btn btn-danger btn-sm">Cancel</button>
-                                    </form>
-                                <?php else: ?>
-                                    <button class="btn btn-danger btn-sm" disabled>Cancel</button>
                                 <?php endif; ?>
 
                             </div>
