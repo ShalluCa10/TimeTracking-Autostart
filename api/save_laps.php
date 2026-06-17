@@ -1,12 +1,12 @@
 <?php
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
-set_exception_handler(function($e) {
+set_exception_handler(function ($e) {
     header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     exit;
 });
-set_error_handler(function($errno, $errstr) {
+set_error_handler(function ($errno, $errstr) {
     header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => $errstr]);
     exit;
@@ -23,7 +23,7 @@ if (!$data || empty($data['session_id']) || empty($data['laps'])) {
 }
 
 $session_id = intval($data['session_id']);
-$laps       = $data['laps'];
+$laps = $data['laps'];
 
 $conn = getConnection();
 
@@ -38,9 +38,9 @@ if (!$stmt) {
 }
 
 foreach ($laps as $lap) {
-    $lap_number  = intval($lap['lap_number']);
+    $lap_number = intval($lap['lap_number']);
     $lap_time_ms = intval($lap['lap_time_ms']);
-    $lap_time    = $lap['lap_time'];
+    $lap_time = $lap['lap_time'];
 
     $stmt->bind_param('iiis', $session_id, $lap_number, $lap_time_ms, $lap_time);
     $stmt->execute();

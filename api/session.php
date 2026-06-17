@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit();
     }
 
-    // ── GET /api/session.php?action=session&session_id=1 ──
+  
     if ($action === 'session' && !empty($_GET['session_id'])) {
         $sessionId = (int) $_GET['session_id'];
 
@@ -62,13 +62,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         echo json_encode([
             'success' => true,
             'session' => $session,
-            'laps'    => $laps,
-            'event'   => $event,
+            'laps' => $laps,
+            'event' => $event,
         ]);
         exit();
     }
 
-    // ── GET /api/session.php?action=next ──
+    
     if ($action === 'next') {
         $stmt = $conn->prepare('SELECT * FROM sessions ORDER BY session_id DESC LIMIT 1');
         $stmt->execute();
@@ -93,14 +93,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit();
     }
 
-    // ── GET /api/session.php?action=events (default) ──
     $result = $conn->query('SELECT * FROM events ORDER BY event_date DESC');
     $events = $result->fetch_all(MYSQLI_ASSOC);
     echo json_encode(['success' => true, 'events' => $events]);
     exit();
 }
 
-// ── POST — Create session via external API ──────────────
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['error' => 'Method not allowed']);
@@ -115,12 +114,12 @@ if (($data['api_key'] ?? '') !== 'changeme123') {
     exit();
 }
 
-$eventId         = (int)   ($data['event_id']         ?? 0);
+$eventId = (int) ($data['event_id'] ?? 0);
 $participantName = trim($data['participant_name'] ?? '');
-$f1Version       = trim($data['f1_version']       ?? '');
-$car             = trim($data['car']              ?? '');
-$track           = trim($data['track']            ?? '');
-$bestLapTime     = trim($data['best_lap_time']    ?? ''); // optional now
+$f1Version = trim($data['f1_version'] ?? '');
+$car = trim($data['car'] ?? '');
+$track = trim($data['track'] ?? '');
+$bestLapTime = trim($data['best_lap_time'] ?? ''); 
 
 if ($eventId === 0 || $participantName === '') {
     http_response_code(400);

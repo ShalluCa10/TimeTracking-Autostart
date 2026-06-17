@@ -24,7 +24,6 @@ function getFlash(): ?array {
 // ── Event Status ──────────────────────────────────────────────────────────────
 
 function resolveEventStatus(string $dbStatus, string $eventDate): array {
-    if ($dbStatus === 'canceled')  return ['canceled',  'Canceled',  'badge--canceled'];
     if ($dbStatus === 'live')      return ['live',       'Live',      'badge--live'];
     if ($dbStatus === 'completed') return ['completed',  'Completed', 'badge--completed'];
 

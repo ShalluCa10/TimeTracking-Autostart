@@ -29,7 +29,7 @@ setFlash('success', 'Session deleted.');
 $redirect = trim($_POST['redirect'] ?? '');
 
 $allowed = ['dashboard.php', 'sessions.php', 'manage_events.php'];
-$base    = strtok($redirect, '?');
+$base = strtok($redirect, '?');
 
 if (in_array($base, $allowed) && $redirect === strip_tags($redirect)) {
     header('Location: ' . $redirect);

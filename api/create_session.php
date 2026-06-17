@@ -6,13 +6,13 @@ require_once __DIR__ . '/../includes/auth.php';
 header('Content-Type: application/json');
 requireLogin();
 
-$raw    = file_get_contents('php://input');
-$data   = json_decode($raw, true);
+$raw = file_get_contents('php://input');
+$data = json_decode($raw, true);
 $action = $data['action'] ?? 'create';
 
 $conn = getConnection();
 
-// ── CREATE SESSION ────────────────────────────────────────
+// CREATE SESSION 
 if ($action === 'create') {
     $eventId = (int) ($data['event_id'] ?? 0);
 
@@ -21,7 +21,7 @@ if ($action === 'create') {
         exit();
     }
 
-    // Pull locked car/track/racer/version from the event
+    // Pull selected options from the event
     $stmt = $conn->prepare('
         SELECT e.car, e.track, e.racer, gv.name AS f1_version
         FROM events e
@@ -39,10 +39,10 @@ if ($action === 'create') {
         exit();
     }
 
-    $car        = $event['car']        ?? '';
-    $track      = $event['track']      ?? '';
-    $racer      = $event['racer']      ?? '';
-    $f1Version  = $event['f1_version'] ?? '';
+    $car = $event['car'] ?? '';
+    $track = $event['track'] ?? '';
+    $racer = $event['racer'] ?? '';
+    $f1Version = $event['f1_version'] ?? '';
 
     $stmt = $conn->prepare('
         INSERT INTO sessions (event_id, participant_name, f1_version, car, track, best_lap_time)
@@ -58,12 +58,12 @@ if ($action === 'create') {
     exit();
 }
 
-// ── SAVE LAP ──────────────────────────────────────────────
+// SAVE LAP
 if ($action === 'save_lap') {
     $sessionId = (int) ($data['session_id'] ?? 0);
     $lapNumber = (int) ($data['lap_number'] ?? 0);
     $lapTimeMs = (int) ($data['lap_time_ms'] ?? 0);
-    $lapTime   = $data['lap_time'] ?? '';
+    $lapTime = $data['lap_time'] ?? '';
 
     if ($sessionId === 0) {
         echo json_encode(['error' => 'session_id required.']);
@@ -84,9 +84,9 @@ if ($action === 'save_lap') {
     exit();
 }
 
-// ── SAVE BEST LAP ─────────────────────────────────────────
+// SAVE BEST LAP
 if ($action === 'save_best_lap') {
-    $sessionId   = (int) ($data['session_id']    ?? 0);
+    $sessionId = (int) ($data['session_id'] ?? 0);
     $bestLapTime = $data['best_lap_time'] ?? '';
 
     if ($sessionId === 0) {

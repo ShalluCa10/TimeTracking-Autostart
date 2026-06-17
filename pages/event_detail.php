@@ -6,7 +6,7 @@ require_once __DIR__ . '/../includes/helpers.php';
 
 requireLogin();
 
-$conn    = getConnection();
+$conn = getConnection();
 $eventId = (int) ($_GET['id'] ?? 0);
 
 // Load event
@@ -21,7 +21,6 @@ if (!$event) {
     exit();
 }
 
-// Load sessions — newest first (best_lap_time is a string, not sortable by value)
 $stmt = $conn->prepare('SELECT * FROM sessions WHERE event_id = ? ORDER BY created_at DESC');
 $stmt->bind_param('i', $eventId);
 $stmt->execute();
@@ -29,7 +28,7 @@ $sessions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 $conn->close();
 
-$flash     = getFlash();
+$flash = getFlash();
 $pageTitle = htmlspecialchars($event['event_name']);
 include __DIR__ . '/../includes/header.php';
 ?>
@@ -70,22 +69,24 @@ include __DIR__ . '/../includes/header.php';
             </tr>
         </thead>
         <tbody>
-            <?php $rank = 1; foreach ($sessions as $session): ?>
+            <?php $rank = 1;
+            foreach ($sessions as $session): ?>
                 <tr>
                     <td><?= $rank++ ?></td>
                     <td><?= htmlspecialchars($session['f1_version'] ?? '—') ?></td>
                     <td><?= htmlspecialchars($session['participant_name']) ?></td>
                     <td><?= htmlspecialchars($session['car']) ?></td>
                     <td><?= htmlspecialchars($session['track']) ?></td>
-                    <td><strong><?= $session['best_lap_time'] !== '' ? htmlspecialchars($session['best_lap_time']) : '—' ?></strong></td>
+                    <td><strong><?= $session['best_lap_time'] !== '' ? htmlspecialchars($session['best_lap_time']) : '—' ?></strong>
+                    </td>
                     <td class="actions">
                         <a href="session_form.php?id=<?= $session['session_id'] ?>&event_id=<?= $eventId ?>"
-                           class="btn btn--outline">Edit</a>
+                            class="btn btn--outline">Edit</a>
                         <form method="POST" action="session_delete.php" style="display:inline">
                             <input type="hidden" name="session_id" value="<?= $session['session_id'] ?>">
-                            <input type="hidden" name="event_id"   value="<?= $eventId ?>">
+                            <input type="hidden" name="event_id" value="<?= $eventId ?>">
                             <button type="submit" class="btn btn--danger"
-                                    onclick="return confirm('Delete session #<?= $session['session_id'] ?>?')">
+                                onclick="return confirm('Delete session #<?= $session['session_id'] ?>?')">
                                 Delete
                             </button>
                         </form>

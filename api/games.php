@@ -17,7 +17,7 @@ if ($action === 'games') {
 }
 
 if ($action === 'game' && !empty($_GET['game_id'])) {
-    $gameId = (int)$_GET['game_id'];
+    $gameId = (int) $_GET['game_id'];
     $game = getGameItemById($conn, 'games', 'game_id', $gameId);
     if (!$game) {
         echo json_encode(['success' => false, 'message' => 'Game not found']);
@@ -31,7 +31,7 @@ if ($action === 'game' && !empty($_GET['game_id'])) {
 }
 
 if ($action === 'event_defaults' && !empty($_GET['event_id'])) {
-    $eventId = (int)$_GET['event_id'];
+    $eventId = (int) $_GET['event_id'];
     $defaults = getEventGameDefaults($conn, $eventId);
     if (!$defaults) {
         echo json_encode(['success' => false, 'message' => 'No defaults for this event']);
