@@ -190,6 +190,18 @@ input:-webkit-autofill {
     background: #0d0d0d;
     padding: 4px 8px;
 }
+/* ── Bulk toolbar ── */
+.bulk-toolbar.has-selection {
+    background: rgba(225, 6, 0, 0.08);
+}
+
+.table tbody tr.row-dimmed {
+    opacity: 0.4;
+}
+
+.row-check {
+    accent-color: #e10600;
+}
 
 /* ── Details cell ── */
 .event-details {
