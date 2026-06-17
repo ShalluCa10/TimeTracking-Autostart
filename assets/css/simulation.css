@@ -207,3 +207,96 @@
 .lap-item .lap-time { color: #00ff88; font-family: 'Orbitron', sans-serif; }
 .lap-item.best { border-left-color: #ffd700; }
 .lap-item.best .lap-time { color: #ffd700; }
+
+/* ── Mimicry Overlay ───────────────────────────── */
+#mimicry-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.88);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+
+.mimicry-box {
+    background: #0d0d0d;
+    border: 1px solid #e10600;
+    border-radius: 12px;
+    padding: 36px 48px;
+    min-width: 360px;
+    font-family: 'Orbitron', monospace;
+    box-shadow: 0 0 40px #e1060033;
+}
+
+.mimicry-title {
+    font-size: 0.75rem;
+    color: #e10600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    text-align: center;
+}
+
+.mimicry-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    min-height: 28px;
+    opacity: 0.3;
+    transition: opacity 0.3s;
+}
+
+.mimicry-row.active { opacity: 1; }
+.mimicry-row.done   { opacity: 0.6; }
+
+.mimicry-label {
+    font-size: 0.65rem;
+    color: #888;
+    letter-spacing: 0.12em;
+    width: 52px;
+}
+
+.mimicry-arrows {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+}
+
+.mimicry-arrow {
+    font-size: 1rem;
+    color: #ffd700;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.15s, transform 0.15s;
+}
+
+.mimicry-arrow.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.mimicry-confirm {
+    font-size: 0.8rem;
+    color: #00ff88;
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+}
+
+.mimicry-confirm.show { opacity: 1; }
+
+.mimicry-ready {
+    text-align: center;
+    margin-top: 24px;
+    font-size: 0.8rem;
+    color: #00ff88;
+    letter-spacing: 0.2em;
+    min-height: 24px;
+    opacity: 0;
+    transition: opacity 0.4s;
+}
+
+.mimicry-ready.show { opacity: 1; }
