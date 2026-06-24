@@ -27,7 +27,7 @@
     <div class="container hero text-center">
         <div class="row justify-content-center mb-4">
             <div class="col-12 col-md-8">
-                <h1 class="display-5 fw-bold"><?php echo APP_NAME; ?></h1>
+                <h1 class="display-5 fw-bold">F1 Lap Simulator</h1>
                 <p class="lead subtitle">Fast laps, live events, and friendly competition — public leaderboard and simulator.</p>
             </div>
         </div>

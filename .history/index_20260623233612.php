@@ -17,9 +17,6 @@
         .card-cta h3{ margin-bottom:8px; color:#fff; }
         .cta-btn{ background:#e10600; color:#fff; border:none; }
         @media (max-width:576px){ .hero{ padding:3rem 1rem } }
-        .subtitle{ font-size:1.1rem;
-             color: #b3adad;    ;
-        }
     </style>
 </head>
 <body>
@@ -27,8 +24,8 @@
     <div class="container hero text-center">
         <div class="row justify-content-center mb-4">
             <div class="col-12 col-md-8">
-                <h1 class="display-5 fw-bold"><?php echo APP_NAME; ?></h1>
-                <p class="lead subtitle">Fast laps, live events, and friendly competition — public leaderboard and simulator.</p>
+                <h1 class="display-5 fw-bold">F1 Lap Simulator</h1>
+                <p class="lead text-muted">Fast laps, live events, and friendly competition — public leaderboard and simulator.</p>
             </div>
         </div>
 
@@ -36,7 +33,7 @@
             <div class="col-12 col-sm-8 col-md-4">
                 <div class="card card-cta p-4 text-start h-100">
                     <h3>Leaderboard</h3>
-                    <p class="subtitle">See the best laps across events and sessions — public view.</p>
+                    <p class="text-muted">See the best laps across events and sessions — public view.</p>
                     <a href="/leaderboard.php" class="btn cta-btn">View Leaderboard</a>
                 </div>
             </div>
@@ -44,7 +41,7 @@
             <div class="col-12 col-sm-8 col-md-4">
                 <div class="card card-cta p-4 text-start h-100">
                     <h3>Simulator</h3>
-                    <p class="subtitle">Start a new session and record lap times in the simulator.</p>
+                    <p class="text-muted">Start a new session and record lap times in the simulator.</p>
                     <a href="/simulation.php" class="btn cta-btn">Open Simulator</a>
                 </div>
             </div>
@@ -52,14 +49,14 @@
             <div class="col-12 col-sm-8 col-md-4">
                 <div class="card card-cta p-4 text-start h-100">
                     <h3>Admin</h3>
-                    <p class="subtitle">Admin login for managing events, games and sessions.</p>
+                    <p class="text-muted">Admin login for managing events, games and sessions.</p>
                     <a href="/pages/login.php" class="btn cta-btn">Admin Login</a>
                 </div>
             </div>
         </div>
 
         <div class="row mt-5">
-            <div class="col-12 text-center subtitle">&copy; <?= date('Y') ?> F1 Lap Simulator</div>
+            <div class="col-12 text-center text-muted">&copy; <?= date('Y') ?> F1 Lap Simulator</div>
         </div>
     </div>
 </div>

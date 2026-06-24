@@ -18,7 +18,7 @@
         .cta-btn{ background:#e10600; color:#fff; border:none; }
         @media (max-width:576px){ .hero{ padding:3rem 1rem } }
         .subtitle{ font-size:1.1rem;
-             color: #b3adad;    ;
+             color:#;
         }
     </style>
 </head>
@@ -27,7 +27,7 @@
     <div class="container hero text-center">
         <div class="row justify-content-center mb-4">
             <div class="col-12 col-md-8">
-                <h1 class="display-5 fw-bold"><?php echo APP_NAME; ?></h1>
+                <h1 class="display-5 fw-bold">F1 Lap Simulator</h1>
                 <p class="lead subtitle">Fast laps, live events, and friendly competition — public leaderboard and simulator.</p>
             </div>
         </div>
@@ -52,14 +52,14 @@
             <div class="col-12 col-sm-8 col-md-4">
                 <div class="card card-cta p-4 text-start h-100">
                     <h3>Admin</h3>
-                    <p class="subtitle">Admin login for managing events, games and sessions.</p>
+                    <p class="text-muted">Admin login for managing events, games and sessions.</p>
                     <a href="/pages/login.php" class="btn cta-btn">Admin Login</a>
                 </div>
             </div>
         </div>
 
         <div class="row mt-5">
-            <div class="col-12 text-center subtitle">&copy; <?= date('Y') ?> F1 Lap Simulator</div>
+            <div class="col-12 text-center text-muted">&copy; <?= date('Y') ?> F1 Lap Simulator</div>
         </div>
     </div>
 </div>
