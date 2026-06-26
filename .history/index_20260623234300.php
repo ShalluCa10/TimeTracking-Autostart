@@ -27,7 +27,7 @@
     <div class="container hero text-center">
         <div class="row justify-content-center mb-4">
             <div class="col-12 col-md-8">
-                <h1 class="display-5 fw-bold"><?php echo APP_NAME; ?></h1>
+                <h1 class="display-5 fw-bold">F1 Lap Simulator</h1>
                 <p class="lead subtitle">Fast laps, live events, and friendly competition — public leaderboard and simulator.</p>
             </div>
         </div>
@@ -59,7 +59,7 @@
         </div>
 
         <div class="row mt-5">
-            <div class="col-12 text-center subtitle">&copy; <?= date('Y') ?> F1 Lap Simulator</div>
+            <div class="col-12 text-center <?php include __DIR__ . '/../includes/footer.php'; ?>">&copy; <?= date('Y') ?> F1 Lap Simulator</div>
         </div>
     </div>
 </div>
