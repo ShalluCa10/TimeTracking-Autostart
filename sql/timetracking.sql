@@ -84,10 +84,10 @@ CREATE TABLE `games` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `game_cars`
+-- Table structure for table `game_teams`
 --
 
-CREATE TABLE `game_cars` (
+CREATE TABLE `game_teams` (
   `id` int(11) NOT NULL,
   `version_id` int(11) NOT NULL,
   `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -96,12 +96,12 @@ CREATE TABLE `game_cars` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `game_cars`
+-- Dumping data for table `game_teams`
 --
 
-INSERT INTO `game_cars` (`id`, `version_id`, `name`, `image`, `sort_order`) VALUES
+INSERT INTO `game_teams` (`id`, `version_id`, `name`, `image`, `sort_order`) VALUES
 (5, 1, 'SF-24', NULL, 1),
-(6, 1, 'AMR24', '/assets/uploads/game_cars_6_1781677359.jpg', 0),
+(6, 1, 'AMR24', '/assets/uploads/game_teams_6_1781677359.jpg', 0),
 (7, 1, 'A524', NULL, 2),
 (8, 1, 'VF-24', NULL, 3),
 (9, 1, 'C44', NULL, 4),
@@ -114,23 +114,10 @@ INSERT INTO `game_cars` (`id`, `version_id`, `name`, `image`, `sort_order`) VALU
 -- --------------------------------------------------------
 
 --
--- Table structure for table `game_drivers`
+-- Table structure for table `game_events`
 --
 
-CREATE TABLE `game_drivers` (
-  `driver_id` int(11) NOT NULL,
-  `game_id` int(11) NOT NULL,
-  `name` varchar(150) NOT NULL,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `game_racers`
---
-
-CREATE TABLE `game_racers` (
+CREATE TABLE `game_events` (
   `id` int(11) NOT NULL,
   `version_id` int(11) NOT NULL,
   `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -139,42 +126,12 @@ CREATE TABLE `game_racers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `game_racers`
+-- Dumping data for table `game_events`
 --
 
-INSERT INTO `game_racers` (`id`, `version_id`, `name`, `image`, `sort_order`) VALUES
-(2, 1, 'LeLerc', NULL, 1),
-(4, 1, 'Lando Norris (#4)', NULL, 2),
-(5, 1, 'Oscar Piastri (#81)', NULL, 0),
-(7, 2, 'Alexander Albon', NULL, 7),
-(9, 2, 'Andrea Kimi Antonelli', NULL, 9),
-(10, 2, 'Oliver Bearman', NULL, 10),
-(11, 2, 'Gabriel Bortoleto', NULL, 11),
-(12, 2, 'Jack Doohan', NULL, 12),
-(13, 1, 'Valtteri Bottas (#77).', NULL, 3),
-(14, 1, 'Guanyu Zhou (#24)', NULL, 4);
-
--- --------------------------------------------------------
-
---
--- Table structure for table `game_tracks`
---
-
-CREATE TABLE `game_tracks` (
-  `id` int(11) NOT NULL,
-  `version_id` int(11) NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `image` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `sort_order` int(11) NOT NULL DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `game_tracks`
---
-
-INSERT INTO `game_tracks` (`id`, `version_id`, `name`, `image`, `sort_order`) VALUES
+INSERT INTO `game_events` (`id`, `version_id`, `name`, `image`, `sort_order`) VALUES
 (3, 2, 'Spa', NULL, 3),
-(4, 1, 'Bahrain International Circuit', '/assets/uploads/game_tracks_4_1781677650.png', 4),
+(4, 1, 'Bahrain International Circuit', '/assets/uploads/game_events_4_1781677650.png', 4),
 (5, 1, 'Jeddah Corniche Circuit', NULL, 5),
 (6, 1, 'Albert Park', NULL, 6),
 (7, 1, 'Suzuka', NULL, 7),
@@ -336,30 +293,16 @@ ALTER TABLE `games`
   ADD UNIQUE KEY `name` (`name`);
 
 --
--- Indexes for table `game_cars`
+-- Indexes for table `game_teams`
 --
-ALTER TABLE `game_cars`
+ALTER TABLE `game_teams`
   ADD PRIMARY KEY (`id`),
   ADD KEY `version_id` (`version_id`);
 
 --
--- Indexes for table `game_drivers`
+-- Indexes for table `game_events`
 --
-ALTER TABLE `game_drivers`
-  ADD PRIMARY KEY (`driver_id`),
-  ADD KEY `game_id` (`game_id`);
-
---
--- Indexes for table `game_racers`
---
-ALTER TABLE `game_racers`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `version_id` (`version_id`);
-
---
--- Indexes for table `game_tracks`
---
-ALTER TABLE `game_tracks`
+ALTER TABLE `game_events`
   ADD PRIMARY KEY (`id`),
   ADD KEY `version_id` (`version_id`);
 
@@ -421,27 +364,15 @@ ALTER TABLE `games`
   MODIFY `game_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `game_cars`
+-- AUTO_INCREMENT for table `game_teams`
 --
-ALTER TABLE `game_cars`
+ALTER TABLE `game_teams`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
--- AUTO_INCREMENT for table `game_drivers`
+-- AUTO_INCREMENT for table `game_events`
 --
-ALTER TABLE `game_drivers`
-  MODIFY `driver_id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `game_racers`
---
-ALTER TABLE `game_racers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
-
---
--- AUTO_INCREMENT for table `game_tracks`
---
-ALTER TABLE `game_tracks`
+ALTER TABLE `game_events`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
@@ -485,28 +416,16 @@ ALTER TABLE `events`
   ADD CONSTRAINT `fk_events_version` FOREIGN KEY (`version_id`) REFERENCES `game_versions` (`id`) ON DELETE SET NULL;
 
 --
--- Constraints for table `game_cars`
+-- Constraints for table `game_teams`
 --
-ALTER TABLE `game_cars`
-  ADD CONSTRAINT `game_cars_ibfk_1` FOREIGN KEY (`version_id`) REFERENCES `game_versions` (`id`) ON DELETE CASCADE;
+ALTER TABLE `game_teams`
+  ADD CONSTRAINT `game_teams_ibfk_1` FOREIGN KEY (`version_id`) REFERENCES `game_versions` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `game_drivers`
+-- Constraints for table `game_events`
 --
-ALTER TABLE `game_drivers`
-  ADD CONSTRAINT `game_drivers_ibfk_1` FOREIGN KEY (`game_id`) REFERENCES `games` (`game_id`) ON DELETE CASCADE;
-
---
--- Constraints for table `game_racers`
---
-ALTER TABLE `game_racers`
-  ADD CONSTRAINT `game_racers_ibfk_1` FOREIGN KEY (`version_id`) REFERENCES `game_versions` (`id`) ON DELETE CASCADE;
-
---
--- Constraints for table `game_tracks`
---
-ALTER TABLE `game_tracks`
-  ADD CONSTRAINT `game_tracks_ibfk_1` FOREIGN KEY (`version_id`) REFERENCES `game_versions` (`id`) ON DELETE CASCADE;
+ALTER TABLE `game_events`
+  ADD CONSTRAINT `game_events_ibfk_1` FOREIGN KEY (`version_id`) REFERENCES `game_versions` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `laps`

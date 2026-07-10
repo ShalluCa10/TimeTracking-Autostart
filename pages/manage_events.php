@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['_action'] ?? '') === 'dele
         $stmt->bind_param('i', $delId);
         $stmt->execute();
         $stmt->close();
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Event deleted.'];
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Schedule deleted.'];
     }
     $conn->close();
     header('Location: manage_events.php');
@@ -34,7 +34,7 @@ $events = $conn->query('
 
 $conn->close();
 
-$pageTitle = 'Manage Events';
+$pageTitle = 'Manage Schedules';
 include __DIR__ . '/../includes/header.php';
 
 function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
@@ -48,19 +48,19 @@ function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8')
 <?php endif; ?>
 
 <div class="page-header">
-    <h2>Manage Events</h2>
-    <a href="event_form.php" class="btn btn-primary">+ New Event</a>
+    <h2>Manage Schedules</h2>
+    <a href="event_form.php" class="btn btn-primary">+ New Schedule</a>
 </div>
 
 <div class="card">
     <?php if (empty($events)): ?>
-        <p class="empty-state">No events yet. Create one to get started.</p>
+        <p class="empty-state">No schedules yet. Create one to get started.</p>
     <?php else: ?>
         <div class="table-responsive">
             <table class="table table-borderless mb-0">
                 <thead>
                     <tr>
-                        <th>Event</th>
+                        <th>Schedule</th>
                         <th>Date</th>
                         <th>Details</th>
                         <th>Sessions</th>
@@ -120,7 +120,7 @@ function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8')
                                         <input type="hidden" name="event_id" value="<?= $event['event_id'] ?>">
                                         <input type="hidden" name="status" value="completed">
                                         <input type="hidden" name="redirect" value="manage_events.php">
-                                        <button type="submit" class="btn btn-secondary btn-sm">End Event</button>
+                                        <button type="submit" class="btn btn-secondary btn-sm">End Schedule</button>
                                     </form>
                                 <?php elseif ($statusKey === 'upcoming'): ?>
                                     <form method="POST" action="event_status.php">
@@ -131,7 +131,7 @@ function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8')
                                     </form>
                                 <?php endif; ?>
                                 <form method="POST"
-                                    onsubmit="return confirm('Delete this event and all its sessions? This cannot be undone.')">
+                                    onsubmit="return confirm('Delete this schedule and all its sessions? This cannot be undone.')">
                                     <input type="hidden" name="_action" value="delete">
                                     <input type="hidden" name="event_id" value="<?= $event['event_id'] ?>">
                                     <button type="submit" class="btn btn-danger btn-sm">Delete</button>

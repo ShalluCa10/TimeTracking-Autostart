@@ -70,7 +70,7 @@ if ($filterEventId > 0) {
 
 $conn->close();
 
-$activeEventName = 'All Events';
+$activeEventName = 'All Schedules';
 if ($filterEventId > 0) {
     foreach ($allEvents as $ev) {
         if ((int) $ev['event_id'] === $filterEventId) {
@@ -95,14 +95,14 @@ function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8')
 
 <div class="page-header">
     <h2>Sessions — <?= h($activeEventName) ?></h2>
-    <a href="manage_events.php" class="btn btn-secondary">← Back to Events</a>
+    <a href="manage_events.php" class="btn btn-secondary">← Back to Schedules</a>
 </div>
 
 <!-- Filter Bar -->
 <form method="GET" class="d-flex align-items-center gap-2 mb-4">
-    <label for="event_id" class="form-label mb-0">Filter by Event</label>
+    <label for="event_id" class="form-label mb-0">Filter by Schedule</label>
     <select name="event_id" id="event_id" class="form-select w-auto">
-        <option value="0">All Events</option>
+        <option value="0">All Schedules</option>
         <?php foreach ($allEvents as $ev): ?>
             <option value="<?= (int) $ev['event_id'] ?>"
                 <?= (int) $ev['event_id'] === $filterEventId ? 'selected' : '' ?>>
@@ -119,7 +119,7 @@ function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8')
 <!-- Sessions Table -->
 <div class="card">
     <?php if (empty($sessions)): ?>
-        <p class="empty-state">No sessions found for this event.</p>
+        <p class="empty-state">No sessions found for this schedule.</p>
     <?php else: ?>
 
         <form method="POST" id="bulkForm">
@@ -139,7 +139,7 @@ function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8')
                     <thead>
                         <tr>
                             <th><input type="checkbox" id="checkAll" class="row-check"></th>
-                            <th>Event</th>
+                            <th>Schedule</th>
                             <th>Participant</th>
                             <th>Best Lap</th>
                             <th>Date</th>

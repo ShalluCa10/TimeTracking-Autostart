@@ -48,7 +48,7 @@ if (!empty($laps)) {
         <div class="results-header">
             <h1>🏁 Session Results</h1>
             <p class="session-label">Session #<?= $session_id ?> &mdash;
-                <?= $session ? htmlspecialchars($session['event_name'] ?? 'Unknown Event') : 'Unknown Event' ?>
+                <?= $session ? htmlspecialchars($session['event_name'] ?? 'Unknown Schedule') : 'Unknown Schedule' ?>
             </p>
         </div>
 
@@ -115,7 +115,7 @@ if (!empty($laps)) {
         <?php endif; ?>
 
         <div class="actions">
-            <a href="simulation.php" class="btn-back">← Back to Events</a>
+            <a href="simulation.php" class="btn-back">← Back to Schedules</a>
         </div>
 
     </div>

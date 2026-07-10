@@ -29,7 +29,7 @@ include __DIR__ . '/../includes/header.php';
 
     <h1 class="sim-title">F1 LAP SIMULATOR</h1>
     <p class="sim-subtitle" id="simSubtitle">
-        Session #<?= $sessionId ?> &nbsp;|&nbsp; Event #<?= $eventId ?>
+        Session #<?= $sessionId ?> &nbsp;|&nbsp; Schedule #<?= $eventId ?>
     </p>
 
     <!-- ── EVENT SELECTOR ── -->
@@ -38,15 +38,15 @@ include __DIR__ . '/../includes/header.php';
 
             <?php if (empty($events)): ?>
                 <p class="sim-empty">
-                    No live events available.
-                    <a href="/pages/manage_events.php">Go live on an event first.</a>
+                    No live schedules available.
+                    <a href="/pages/manage_events.php">Go live on a schedule first.</a>
                 </p>
             <?php else: ?>
 
                 <div class="sim-pre__group">
-                    <label for="sel-event">SELECT EVENT</label>
+                    <label for="sel-event">SELECT SCHEDULE</label>
                     <select id="sel-event">
-                        <option value="">— Select Event —</option>
+                        <option value="">— Select Schedule —</option>
                         <?php foreach ($events as $ev): ?>
                             <option value="<?= $ev['event_id'] ?>" data-car="<?= htmlspecialchars($ev['car'] ?? '') ?>"
                                 data-track="<?= htmlspecialchars($ev['track'] ?? '') ?>"

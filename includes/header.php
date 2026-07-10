@@ -37,7 +37,7 @@ if (!defined('APP_NAME'))  define('APP_NAME', 'F1 Lap Simulator');
                     <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'dashboard.php'     ? 'active' : '' ?>" href="/pages/dashboard.php">Dashboard</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'manage_events.php' ? 'active' : '' ?>" href="/pages/manage_events.php">Manage Events</a>
+                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'manage_events.php' ? 'active' : '' ?>" href="/pages/manage_events.php">Manage Schedules</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'simulation.php'    ? 'active' : '' ?>" href="/simulation.php">Simulator</a>

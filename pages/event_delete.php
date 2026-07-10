@@ -25,6 +25,6 @@ $stmt->execute();
 $stmt->close();
 $conn->close();
 
-setFlash('success', 'Event deleted.');
+setFlash('success', 'Schedule deleted.');
 header('Location: dashboard.php');
 exit();

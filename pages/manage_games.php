@@ -2,10 +2,12 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/helpers.php';
 
 requireLogin();
 
 $conn = getConnection();
+ensureGameTables($conn);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -35,8 +37,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $type = $_POST['item_type'] ?? '';
         $raw = trim($_POST['items'] ?? '');
 
-        $allowed = ['game_tracks', 'game_cars', 'game_racers'];
-        $table = 'game_' . $type;
+        $tableMap = ['tracks' => 'game_events', 'cars' => 'game_teams'];
+        $allowed = ['game_events', 'game_teams'];
+        $table = $tableMap[$type] ?? '';
 
         if ($versionId > 0 && in_array($table, $allowed) && $raw !== '') {
             $items = preg_split('/[\n,]+/', $raw);
@@ -67,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int) ($_POST['item_id'] ?? 0);
         $table = $_POST['item_table'] ?? '';
 
-        $allowed = ['game_tracks', 'game_cars', 'game_racers'];
+        $allowed = ['game_events', 'game_teams'];
         if ($id > 0 && in_array($table, $allowed)) {
             $stmt = $conn->prepare("DELETE FROM `$table` WHERE id = ?");
             $stmt->bind_param('i', $id);
@@ -87,24 +90,18 @@ $versions = $conn->query('SELECT * FROM game_versions ORDER BY name ASC')
 
 $activeVersionId = (int) ($_GET['version_id'] ?? ($versions[0]['id'] ?? 0));
 
-$tracks = $cars = $racers = [];
+$tracks = $cars = [];
 if ($activeVersionId > 0) {
-    $stmt = $conn->prepare('SELECT * FROM game_tracks WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
+    $stmt = $conn->prepare('SELECT * FROM game_events WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
     $stmt->bind_param('i', $activeVersionId);
     $stmt->execute();
     $tracks = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 
-    $stmt = $conn->prepare('SELECT * FROM game_cars WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
+    $stmt = $conn->prepare('SELECT * FROM game_teams WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
     $stmt->bind_param('i', $activeVersionId);
     $stmt->execute();
     $cars = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmt->close();
-
-    $stmt = $conn->prepare('SELECT * FROM game_racers WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
-    $stmt->bind_param('i', $activeVersionId);
-    $stmt->execute();
-    $racers = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 }
 
@@ -155,7 +152,7 @@ include __DIR__ . '/../includes/header.php';
 
                     <?php if ($activeVersionId > 0): ?>
                         <form method="POST"
-                            onsubmit="return confirm('Delete this version and ALL its tracks, cars and racers?')">
+                            onsubmit="return confirm('Delete this version and ALL its schedules and teams?')">
                             <input type="hidden" name="action" value="delete_version">
                             <input type="hidden" name="version_id" value="<?= $activeVersionId ?>">
                             <button type="submit" class="btn btn-danger">Delete</button>
@@ -188,9 +185,8 @@ include __DIR__ . '/../includes/header.php';
 
         <?php
         $panels = [
-            ['label' => 'Tracks', 'type' => 'tracks', 'data' => $tracks, 'table' => 'game_tracks', 'placeholder' => "One per line or comma separated\ne.g. Monza\nSilverstone\nSpa"],
-            ['label' => 'Cars', 'type' => 'cars', 'data' => $cars, 'table' => 'game_cars', 'placeholder' => "One per line or comma separated\ne.g. Ferrari SF-24\nRed Bull RB20"],
-            ['label' => 'Racers', 'type' => 'racers', 'data' => $racers, 'table' => 'game_racers', 'placeholder' => "One per line or comma separated\ne.g. Leclerc\nVerstappen\nHamilton"],
+            ['label' => 'Teams', 'type' => 'cars', 'data' => $cars, 'table' => 'game_teams', 'placeholder' => "One per line or comma separated\ne.g. Ferrari\nMercedes\nRed Bull"],
+            ['label' => 'Schedules', 'type' => 'tracks', 'data' => $tracks, 'table' => 'game_events', 'placeholder' => "One per line or comma separated\ne.g. Monaco GP\nSilverstone\nSpa"],
         ];
         ?>
 
@@ -222,7 +218,7 @@ include __DIR__ . '/../includes/header.php';
                     <ul class="manage-card__list sortable-list" data-table="<?= $panel['table'] ?>"
                         id="list-<?= $panel['type'] ?>">
                         <?php if (empty($panel['data'])): ?>
-                            <li class="manage-card__empty">No <?= $panel['type'] ?> yet.</li>
+                            <li class="manage-card__empty">No <?= $panel['label'] ?> yet.</li>
                         <?php else: ?>
                             <?php foreach ($panel['data'] as $item): ?>
                                 <li class="sortable-item" data-id="<?= $item['id'] ?>">
@@ -403,9 +399,6 @@ include __DIR__ . '/../includes/header.php';
         border-left: 3px solid #e10600;
     }
 
-    #list-racers .sortable-item {
-        border-left: 3px solid #00ff88;
-    }
 </style>
 
 

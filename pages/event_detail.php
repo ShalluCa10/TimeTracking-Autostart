@@ -34,7 +34,7 @@ include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="page-header">
-    <a href="dashboard.php" class="back-link">← Back to Events</a>
+    <a href="dashboard.php" class="back-link">← Back to Schedules</a>
     <h2><?= htmlspecialchars($event['event_name']) ?></h2>
     <div class="event-actions">
         <a href="session_form.php?event_id=<?= $eventId ?>" class="btn btn--primary">+ Add Session</a>
@@ -54,7 +54,7 @@ include __DIR__ . '/../includes/header.php';
 <?php endif; ?>
 
 <?php if (count($sessions) === 0): ?>
-    <p class="empty-state">No sessions yet for this event.</p>
+    <p class="empty-state">No sessions yet for this schedule.</p>
 <?php else: ?>
     <table class="table">
         <thead>

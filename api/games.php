@@ -23,10 +23,9 @@ if ($action === 'game' && !empty($_GET['game_id'])) {
         echo json_encode(['success' => false, 'message' => 'Game not found']);
         exit();
     }
-    $cars = getGameItems($conn, $gameId, 'game_cars', 'car_id');
-    $tracks = getGameItems($conn, $gameId, 'game_tracks', 'track_id');
-    $drivers = getGameItems($conn, $gameId, 'game_drivers', 'driver_id');
-    echo json_encode(['success' => true, 'game' => $game, 'cars' => $cars, 'tracks' => $tracks, 'drivers' => $drivers]);
+    $cars = getGameItems($conn, $gameId, 'game_teams', 'id');
+    $tracks = getGameItems($conn, $gameId, 'game_events', 'id');
+    echo json_encode(['success' => true, 'game' => $game, 'cars' => $cars, 'tracks' => $tracks]);
     exit();
 }
 
@@ -38,10 +37,9 @@ if ($action === 'event_defaults' && !empty($_GET['event_id'])) {
         exit();
     }
     $game = getGameItemById($conn, 'games', 'game_id', $defaults['game_id']);
-    $car = getGameItemById($conn, 'game_cars', 'car_id', $defaults['car_id']);
-    $track = getGameItemById($conn, 'game_tracks', 'track_id', $defaults['track_id']);
-    $driver = getGameItemById($conn, 'game_drivers', 'driver_id', $defaults['driver_id']);
-    echo json_encode(['success' => true, 'defaults' => $defaults, 'game' => $game, 'car' => $car, 'track' => $track, 'driver' => $driver]);
+    $car = getGameItemById($conn, 'game_teams', 'id', $defaults['car_id'] ?? 0);
+    $track = getGameItemById($conn, 'game_events', 'id', $defaults['track_id'] ?? 0);
+    echo json_encode(['success' => true, 'defaults' => $defaults, 'game' => $game, 'car' => $car, 'track' => $track]);
     exit();
 }
 

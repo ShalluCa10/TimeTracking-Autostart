@@ -7,7 +7,7 @@ requireLogin();
 
 header('Content-Type: application/json');
 
-$allowed = ['game_tracks', 'game_cars', 'game_racers'];
+$allowed = ['game_events', 'game_teams'];
 $table = $_POST['table'] ?? '';
 $ids = $_POST['ids'] ?? [];
 

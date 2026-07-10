@@ -45,21 +45,17 @@ $racers = [];
 $selectedVersion = (int) ($values['version_id'] ?? 0);
 
 if ($selectedVersion > 0) {
-    $stmt = $conn->prepare('SELECT name FROM game_cars WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
+    $stmt = $conn->prepare('SELECT name FROM game_teams WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
     $stmt->bind_param('i', $selectedVersion);
     $stmt->execute();
     $cars = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
-    $stmt = $conn->prepare('SELECT name FROM game_tracks WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
+    $stmt = $conn->prepare('SELECT name FROM game_events WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
     $stmt->bind_param('i', $selectedVersion);
     $stmt->execute();
     $tracks = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
-    $stmt = $conn->prepare('SELECT name FROM game_racers WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
-    $stmt->bind_param('i', $selectedVersion);
-    $stmt->execute();
-    $racers = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmt->close();
+    $racers = [];
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -73,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $values['racer'] = trim($_POST['racer'] ?? '');
     $values['status'] = trim($_POST['status'] ?? 'auto');
     if ($values['event_name'] === '')
-        $errors[] = 'Event name is required.';
+        $errors[] = 'Schedule name is required.';
     if ($values['event_date'] === '')
         $errors[] = 'Date is required.';
     if ($values['version_id'] === 0)
@@ -130,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute();
         $stmt->close();
         $conn->close();
-        $_SESSION['flash'] = ['type' => 'success', 'message' => $isEdit ? 'Event updated.' : 'Event created.'];
+        $_SESSION['flash'] = ['type' => 'success', 'message' => $isEdit ? 'Schedule updated.' : 'Schedule created.'];
         header('Location: dashboard.php');
         exit();
     }
@@ -138,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $conn->close();
 
-$pageTitle = $isEdit ? 'Edit Event' : 'New Event';
+$pageTitle = $isEdit ? 'Edit Schedule' : 'New Schedule';
 include __DIR__ . '/../includes/header.php';
 
 function h(string $s): string
@@ -191,7 +187,7 @@ function emptyClass(bool $condition): string
                 <form method="POST">
                     <div class="row g-3 mb-3">
                         <div class="col-md-8">
-                            <label for="event_name" class="form-label">Event Name <span
+                            <label for="event_name" class="form-label">Schedule Name <span
                                     class="text-danger">*</span></label>
                             <input type="text" id="event_name" name="event_name" class="form-control"
                                 value="<?= h($values['event_name']) ?>" required autofocus
@@ -227,7 +223,7 @@ function emptyClass(bool $condition): string
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label for="sel-track" class="form-label">Track <span class="text-danger">*</span></label>
+                            <label for="sel-track" class="form-label">Schedule <span class="text-danger">*</span></label>
                             <select id="sel-track" name="track"
                                 class="form-select <?= emptyClass($values['track'] === '') ?>" required
                                 <?= dis($selectedVersion === 0) ?>>
@@ -242,7 +238,7 @@ function emptyClass(bool $condition): string
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="sel-car" class="form-label">Car <span class="text-danger">*</span></label>
+                            <label for="sel-car" class="form-label">Team <span class="text-danger">*</span></label>
                             <select id="sel-car" name="car" class="form-select <?= emptyClass($values['car'] === '') ?>"
                                 required <?= dis($selectedVersion === 0) ?>>
                                 <option value="" disabled selected>
@@ -257,23 +253,13 @@ function emptyClass(bool $condition): string
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="sel-racer" class="form-label">Racer <span class="text-danger">*</span></label>
-                        <select id="sel-racer" name="racer"
-                            class="form-select <?= emptyClass($values['racer'] === '') ?>" required
-                            <?= dis($selectedVersion === 0) ?>>
-                            <option value="" disabled selected>
-                                <?= $selectedVersion === 0 ? 'Select Version First' : 'Select Racer' ?>
-                            </option>
-                            <?php foreach ($racers as $r): ?>
-                                <option value="<?= h($r['name']) ?>" <?= sel($values['racer'], $r['name']) ?>>
-                                    <?= h($r['name']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <label for="racer" class="form-label">Participant <span class="text-danger">*</span></label>
+                        <input type="text" id="racer" name="racer" class="form-control <?= emptyClass($values['racer'] === '') ?>"
+                            value="<?= h($values['racer']) ?>" required placeholder="e.g. Oscar Piastri">
                     </div>
                     <?php if ($isEdit): ?>
                         <div class="mb-1 mt-4">
-                            <span class="form-section__label">Event Status</span>
+                            <span class="form-section__label">Schedule Status</span>
                         </div>
                         <div class="mb-3">
                             <label for="sel-status" class="form-label">Status <span class="text-danger">*</span></label>
@@ -291,7 +277,7 @@ function emptyClass(bool $condition): string
                     </div>
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
-                            <?= $isEdit ? 'Save Changes' : 'Create Event' ?>
+                            <?= $isEdit ? 'Save Changes' : 'Create Schedule' ?>
                         </button>
                     </div>
                 </form>
@@ -305,7 +291,7 @@ function emptyClass(bool $condition): string
         const selVersion = document.getElementById('sel-version');
         const selTrack = document.getElementById('sel-track');
         const selCar = document.getElementById('sel-car');
-        const selRacer = document.getElementById('sel-racer');
+        const selRacer = document.getElementById('racer');
         const savedTrack = <?= json_encode($values['track']) ?>;
         const savedCar = <?= json_encode($values['car']) ?>;
         const savedRacer = <?= json_encode($values['racer']) ?>;
@@ -336,21 +322,20 @@ function emptyClass(bool $condition): string
             if (!versionId) return;
             resetSelect(selTrack, 'Loading...');
             resetSelect(selCar, 'Loading...');
-            resetSelect(selRacer, 'Loading...');
             try {
-                const [tracks, cars, racers] = await Promise.all([
+                const [tracks, cars] = await Promise.all([
                     fetch(`${API_URL}?type=tracks&version_id=${versionId}`).then(r => r.json()),
                     fetch(`${API_URL}?type=cars&version_id=${versionId}`).then(r => r.json()),
-                    fetch(`${API_URL}?type=racers&version_id=${versionId}`).then(r => r.json()),
                 ]);
-                populate(selTrack, tracks, restoreTrack, tracks.length ? 'Select Track' : 'No tracks');
-                populate(selCar, cars, restoreCar, cars.length ? 'Select Car' : 'No cars');
-                populate(selRacer, racers, restoreRacer, racers.length ? 'Select Racer' : 'No racers');
+                populate(selTrack, tracks, restoreTrack, tracks.length ? 'Select Schedule' : 'No schedules');
+                populate(selCar, cars, restoreCar, cars.length ? 'Select Team' : 'No teams');
+                if (selRacer.value === '') {
+                    selRacer.value = restoreRacer || '';
+                }
             } catch (err) {
                 console.error('get_options failed:', err);
                 resetSelect(selTrack, 'Error loading');
                 resetSelect(selCar, 'Error loading');
-                resetSelect(selRacer, 'Error loading');
             }
         }
 
@@ -361,11 +346,10 @@ function emptyClass(bool $condition): string
             } else {
                 resetSelect(selTrack, 'Select Version First');
                 resetSelect(selCar, 'Select Version First');
-                resetSelect(selRacer, 'Select Version First');
             }
         });
 
-        [selTrack, selCar, selRacer].forEach(el => {
+        [selTrack, selCar].forEach(el => {
             el.addEventListener('change', function () {
                 this.classList.toggle('empty', this.value === '');
             });

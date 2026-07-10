@@ -24,7 +24,7 @@ if ($id && in_array($status, ['auto', 'live', 'completed'])) {
     $stmt->execute();
     $stmt->close();
     $conn->close();
-    setFlash('success', 'Event status updated.');
+    setFlash('success', 'Schedule status updated.');
 }
 
 header('Location: ../pages/' . $redirect);

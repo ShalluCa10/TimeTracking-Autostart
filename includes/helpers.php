@@ -36,6 +36,11 @@ function resolveEventStatus(string $dbStatus, string $eventDate): array {
 // ── DB Table Bootstrap ────────────────────────────────────────────────────────
 
 function ensureGameTables($conn) {
+    $tableExists = function(string $tableName) use ($conn): bool {
+        $result = $conn->query("SHOW TABLES LIKE '$tableName'");
+        return $result && $result->num_rows > 0;
+    };
+
     $conn->query("CREATE TABLE IF NOT EXISTS games (
         game_id INT NOT NULL AUTO_INCREMENT,
         name VARCHAR(100) NOT NULL UNIQUE,
@@ -43,47 +48,51 @@ function ensureGameTables($conn) {
         PRIMARY KEY (game_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
-    $conn->query("CREATE TABLE IF NOT EXISTS game_cars (
-        car_id INT NOT NULL AUTO_INCREMENT,
-        game_id INT NOT NULL,
-        name VARCHAR(150) NOT NULL,
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (car_id),
-        FOREIGN KEY (game_id) REFERENCES games(game_id) ON DELETE CASCADE
+    $conn->query("CREATE TABLE IF NOT EXISTS game_versions (
+        id INT NOT NULL AUTO_INCREMENT,
+        name VARCHAR(100) NOT NULL,
+        PRIMARY KEY (id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
-    $conn->query("CREATE TABLE IF NOT EXISTS game_tracks (
-        track_id INT NOT NULL AUTO_INCREMENT,
-        game_id INT NOT NULL,
-        name VARCHAR(150) NOT NULL,
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (track_id),
-        FOREIGN KEY (game_id) REFERENCES games(game_id) ON DELETE CASCADE
+    if ($tableExists('game_cars') && !$tableExists('game_teams')) {
+        $conn->query('RENAME TABLE game_cars TO game_teams');
+    }
+
+    if ($tableExists('game_tracks') && !$tableExists('game_events')) {
+        $conn->query('RENAME TABLE game_tracks TO game_events');
+    }
+
+    if ($tableExists('game_racers')) {
+        $conn->query('DROP TABLE IF EXISTS game_racers');
+    }
+
+    $conn->query("CREATE TABLE IF NOT EXISTS game_teams (
+        id INT NOT NULL AUTO_INCREMENT,
+        version_id INT NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        image VARCHAR(255) DEFAULT NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        PRIMARY KEY (id),
+        KEY idx_game_teams_version (version_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
-    $conn->query("CREATE TABLE IF NOT EXISTS game_drivers (
-        driver_id INT NOT NULL AUTO_INCREMENT,
-        game_id INT NOT NULL,
-        name VARCHAR(150) NOT NULL,
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (driver_id),
-        FOREIGN KEY (game_id) REFERENCES games(game_id) ON DELETE CASCADE
+    $conn->query("CREATE TABLE IF NOT EXISTS game_events (
+        id INT NOT NULL AUTO_INCREMENT,
+        version_id INT NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        image VARCHAR(255) DEFAULT NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        PRIMARY KEY (id),
+        KEY idx_game_events_version (version_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
-    $conn->query("CREATE TABLE IF NOT EXISTS event_game_defaults (
-        event_id INT NOT NULL PRIMARY KEY,
-        game_id INT NOT NULL,
-        car_id INT NOT NULL,
-        track_id INT NOT NULL,
-        driver_id INT NOT NULL,
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
-        FOREIGN KEY (game_id) REFERENCES games(game_id) ON DELETE RESTRICT,
-        FOREIGN KEY (car_id) REFERENCES game_cars(car_id) ON DELETE RESTRICT,
-        FOREIGN KEY (track_id) REFERENCES game_tracks(track_id) ON DELETE RESTRICT,
-        FOREIGN KEY (driver_id) REFERENCES game_drivers(driver_id) ON DELETE RESTRICT
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+    if ($tableExists('game_cars') && !$conn->query('SELECT 1 FROM game_teams LIMIT 1')->num_rows) {
+        $conn->query('INSERT INTO game_teams (id, version_id, name, image, sort_order) SELECT id, version_id, name, image, sort_order FROM game_cars');
+    }
+
+    if ($tableExists('game_tracks') && !$conn->query('SELECT 1 FROM game_events LIMIT 1')->num_rows) {
+        $conn->query('INSERT INTO game_events (id, version_id, name, image, sort_order) SELECT id, version_id, name, image, sort_order FROM game_tracks');
+    }
 
     $conn->query("CREATE TABLE IF NOT EXISTS teams (
         team_id INT NOT NULL AUTO_INCREMENT,
@@ -114,16 +123,6 @@ function ensureGameTables($conn) {
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (track_id),
         UNIQUE KEY uq_track_code (track_code)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-
-    $conn->query("CREATE TABLE IF NOT EXISTS drivers (
-        driver_id INT NOT NULL AUTO_INCREMENT,
-        team_id INT NOT NULL,
-        name VARCHAR(150) NOT NULL,
-        country VARCHAR(80) NOT NULL DEFAULT '',
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (driver_id),
-        FOREIGN KEY (team_id) REFERENCES teams(team_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
     $conn->query("CREATE TABLE IF NOT EXISTS rigs (

@@ -80,23 +80,19 @@ if ($isEdit) {
 }
 
 if ($selectedVersion > 0) {
-    $stmt = $conn->prepare('SELECT name FROM game_cars WHERE version_id = ? ORDER BY name ASC');
+    $stmt = $conn->prepare('SELECT name FROM game_teams WHERE version_id = ? ORDER BY name ASC');
     $stmt->bind_param('i', $selectedVersion);
     $stmt->execute();
     $cars = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 
-    $stmt = $conn->prepare('SELECT name FROM game_tracks WHERE version_id = ? ORDER BY name ASC');
+    $stmt = $conn->prepare('SELECT name FROM game_events WHERE version_id = ? ORDER BY name ASC');
     $stmt->bind_param('i', $selectedVersion);
     $stmt->execute();
     $tracks = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 
-    $stmt = $conn->prepare('SELECT name FROM game_racers WHERE version_id = ? ORDER BY name ASC');
-    $stmt->bind_param('i', $selectedVersion);
-    $stmt->execute();
-    $racers = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmt->close();
+    $racers = [];
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['participant_name'])) {
@@ -110,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['participant_name'])) 
     if ($participantName === '') {
         $error = 'Participant name is required.';
     } elseif ($eventId === 0) {
-        $error = 'Please select an event.';
+        $error = 'Please select a schedule.';
     } elseif ($f1Version === '') {
         $error = 'Please select a game version.';
     } elseif ($car === '') {
@@ -146,7 +142,7 @@ include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="page-header">
-    <a href="event_detail.php?id=<?= $eventId ?>" class="back-link">← Back to Event</a>
+    <a href="event_detail.php?id=<?= $eventId ?>" class="back-link">← Back to Schedule</a>
     <h2><?= $isEdit ? 'Edit Session' : 'Add Session' ?></h2>
 </div>
 
@@ -159,10 +155,10 @@ include __DIR__ . '/../includes/header.php';
     <!-- Event -->
     <?php if (!$isEdit): ?>
         <div class="form-group">
-            <label for="event_id">Event</label>
+            <label for="event_id">Schedule</label>
             <select id="event_id" name="event_id" required
                 onchange="window.location.href='session_form.php?event_id=' + this.value">
-                <option value="">— Select Event —</option>
+                <option value="">— Select Schedule —</option>
                 <?php foreach ($events as $ev): ?>
                     <option value="<?= $ev['event_id'] ?>" <?= $ev['event_id'] == $eventId ? 'selected' : '' ?>>
                         <?= htmlspecialchars($ev['event_name']) ?>
@@ -171,7 +167,7 @@ include __DIR__ . '/../includes/header.php';
             </select>
         </div>
     <?php else: ?>
-        <p class="form-readonly">Event: <strong><?= htmlspecialchars($event['event_name'] ?? '—') ?></strong></p>
+        <p class="form-readonly">Schedule: <strong><?= htmlspecialchars($event['event_name'] ?? '—') ?></strong></p>
         <input type="hidden" name="event_id" value="<?= $eventId ?>">
     <?php endif; ?>
 
@@ -190,7 +186,7 @@ include __DIR__ . '/../includes/header.php';
 
     <!-- Track -->
     <div class="form-group">
-        <label for="sel-track">🏁 Track</label>
+        <label for="sel-track">🏁 Schedule</label>
         <select id="sel-track" name="track" required <?= $selectedVersion === 0 ? 'disabled' : '' ?>>
             <option value="">— Select Version First —</option>
             <?php foreach ($tracks as $t): ?>
@@ -203,7 +199,7 @@ include __DIR__ . '/../includes/header.php';
 
     <!-- Car -->
     <div class="form-group">
-        <label for="sel-car">🚗 Car</label>
+        <label for="sel-car">🚗 Team</label>
         <select id="sel-car" name="car" required <?= $selectedVersion === 0 ? 'disabled' : '' ?>>
             <option value="">— Select Version First —</option>
             <?php foreach ($cars as $c): ?>
@@ -214,17 +210,11 @@ include __DIR__ . '/../includes/header.php';
         </select>
     </div>
 
-    <!-- Racer -->
+    <!-- Participant -->
     <div class="form-group">
-        <label for="sel-racer">👤 Racer / Participant</label>
-        <select id="sel-racer" name="participant_name" required <?= $selectedVersion === 0 ? 'disabled' : '' ?>>
-            <option value="">— Select Version First —</option>
-            <?php foreach ($racers as $r): ?>
-                <option value="<?= htmlspecialchars($r['name']) ?>" <?= $r['name'] === $participantName ? 'selected' : '' ?>>
-                    <?= htmlspecialchars($r['name']) ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
+        <label for="participant_name">👤 Participant</label>
+        <input type="text" id="participant_name" name="participant_name" value="<?= htmlspecialchars($participantName) ?>"
+            placeholder="e.g. Oscar Piastri" required>
     </div>
 
     <!-- Best Lap Time -->
@@ -249,11 +239,9 @@ include __DIR__ . '/../includes/header.php';
         const selVersion = document.getElementById('sel-version');
         const selTrack = document.getElementById('sel-track');
         const selCar = document.getElementById('sel-car');
-        const selRacer = document.getElementById('sel-racer');
 
         const savedTrack = <?= json_encode($track) ?>;
         const savedCar = <?= json_encode($car) ?>;
-        const savedRacer = <?= json_encode($participantName) ?>;
 
         function resetSelect(el, placeholder) {
             el.innerHTML = `<option value="">${placeholder}</option>`;
@@ -275,17 +263,14 @@ include __DIR__ . '/../includes/header.php';
         async function loadOptions(versionId) {
             resetSelect(selTrack, '— Loading... —');
             resetSelect(selCar, '— Loading... —');
-            resetSelect(selRacer, '— Loading... —');
 
-            const [tracks, cars, racers] = await Promise.all([
+            const [tracks, cars] = await Promise.all([
                 fetch(`../api/get_options.php?type=tracks&version_id=${versionId}`).then(r => r.json()),
                 fetch(`../api/get_options.php?type=cars&version_id=${versionId}`).then(r => r.json()),
-                fetch(`../api/get_options.php?type=racers&version_id=${versionId}`).then(r => r.json()),
             ]);
 
-            populate(selTrack, tracks, savedTrack, tracks.length ? '— Select Track —' : '— No tracks —');
-            populate(selCar, cars, savedCar, cars.length ? '— Select Car —' : '— No cars —');
-            populate(selRacer, racers, savedRacer, racers.length ? '— Select Racer —' : '— No racers —');
+            populate(selTrack, tracks, savedTrack, tracks.length ? '— Select Schedule —' : '— No schedules —');
+            populate(selCar, cars, savedCar, cars.length ? '— Select Team —' : '— No teams —');
         }
 
         selVersion.addEventListener('change', function () {
@@ -296,7 +281,6 @@ include __DIR__ . '/../includes/header.php';
             } else {
                 resetSelect(selTrack, '— Select Version First —');
                 resetSelect(selCar, '— Select Version First —');
-                resetSelect(selRacer, '— Select Version First —');
             }
         });
 

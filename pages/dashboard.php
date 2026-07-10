@@ -47,13 +47,13 @@ include __DIR__ . '/../includes/header.php';
 
 <div class="page-header">
     <h2>Dashboard</h2>
-    <a href="event_form.php" class="btn btn-primary">+ New Event</a>
+    <a href="event_form.php" class="btn btn-primary">+ New Schedule</a>
 </div>
 
-<!-- Events -->
+<!-- Schedules -->
 <div class="card mb-4">
     <div class="card-header">
-        <h3>Events</h3>
+        <h3>Schedules</h3>
         <span class="text-muted"
             style="font-size:0.75rem; font-family:'Barlow Condensed',sans-serif; letter-spacing:0.05em;">
             <?= count($events) ?> total
@@ -61,13 +61,13 @@ include __DIR__ . '/../includes/header.php';
     </div>
 
     <?php if (empty($events)): ?>
-        <p class="empty-state">No events yet. Create one to get started.</p>
+        <p class="empty-state">No schedules yet. Create one to get started.</p>
     <?php else: ?>
         <div class="table-responsive">
             <table class="table table-borderless mb-0">
                 <thead>
                     <tr>
-                        <th>Event</th>
+                        <th>Schedule</th>
                         <th>Date</th>
                         <th>Details</th>
                         <th>Sessions</th>
@@ -122,7 +122,7 @@ include __DIR__ . '/../includes/header.php';
                                         <form method="POST" action="event_status.php">
                                             <input type="hidden" name="event_id" value="<?= $event['event_id'] ?>">
                                             <input type="hidden" name="status" value="completed">
-                                            <button type="submit" class="btn btn-secondary btn-sm">End Event</button>
+                                            <button type="submit" class="btn btn-secondary btn-sm">End Schedule</button>
                                         </form>
                                     <?php elseif ($statusKey === 'upcoming'): ?>
                                         <form method="POST" action="event_status.php">
@@ -158,7 +158,7 @@ include __DIR__ . '/../includes/header.php';
             <table class="table table-borderless mb-0">
                 <thead>
                     <tr>
-                        <th>Event</th>
+                        <th>Schedule</th>
                         <th>Details</th>
                         <th>Lap #</th>
                         <th>Lap Time</th>
