@@ -40,13 +40,16 @@ if (!defined('APP_NAME'))  define('APP_NAME', 'F1 Lap Simulator');
                     <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'manage_schedules.php' ? 'active' : '' ?>" href="/pages/admin/schedules/manage_schedules.php">Manage Schedules</a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'sessions.php'      ? 'active' : '' ?>" href="/pages/admin/sessions/sessions.php">Manage Sessions</a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'simulation.php'    ? 'active' : '' ?>" href="/simulation.php">Simulator</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'leaderboard.php'   ? 'active' : '' ?>" href="/leaderboard.php">Leaderboard</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'manage_games.php'  ? 'active' : '' ?>" href="/pages/admin/games/manage_games.php">Manage Game</a>
+                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'manage_games.php'  ? 'active' : '' ?>" href="/pages/admin/games/manage_games.php">Manage Games</a>
                 </li>
             </ul>
 

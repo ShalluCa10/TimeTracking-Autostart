@@ -1,8 +1,8 @@
 <?php
-require_once __DIR__ . '/../../../config/config.php';
-require_once __DIR__ . '/../../../config/db.php';
-require_once __DIR__ . '/../../../includes/auth.php';
-require_once __DIR__ . '/../../../includes/helpers.php';
+require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/helpers.php';
 
 requireLogin();
 
@@ -151,8 +151,7 @@ include __DIR__ . '/../../../includes/header.php';
                     <?php endif; ?>
 
                     <?php if ($activeVersionId > 0): ?>
-                        <form method="POST"
-                            onsubmit="return confirm('Delete this version and ALL its events and teams?')">
+                        <form method="POST" onsubmit="return confirm('Delete this version and ALL its events and teams?')">
                             <input type="hidden" name="action" value="delete_version">
                             <input type="hidden" name="version_id" value="<?= $activeVersionId ?>">
                             <button type="submit" class="btn btn-danger">Delete</button>
@@ -214,55 +213,53 @@ include __DIR__ . '/../../../includes/header.php';
                         </form>
                     </div>
 
-                   <!-- Item grid -->
-<ul class="sortable-list item-grid" data-table="<?= $panel['table'] ?>"
-    id="list-<?= $panel['type'] ?>">
-    <?php if (empty($panel['data'])): ?>
-        <li class="manage-card__empty">No <?= $panel['label'] ?> yet.</li>
-    <?php else: ?>
-        <?php foreach ($panel['data'] as $item): ?>
-            <?php
-                // Build 2-letter initials fallback (e.g. "Ferrari" -> "FE")
-                $clean = preg_replace('/[^A-Za-z0-9]/', '', $item['name']);
-                $initials = $clean !== '' ? strtoupper(mb_substr($clean, 0, 2)) : '?';
-            ?>
-            <li class="sortable-item" data-id="<?= $item['id'] ?>">
+                    <!-- Item grid -->
+                    <ul class="sortable-list item-grid" data-table="<?= $panel['table'] ?>" id="list-<?= $panel['type'] ?>">
+                        <?php if (empty($panel['data'])): ?>
+                            <li class="manage-card__empty">No <?= $panel['label'] ?> yet.</li>
+                        <?php else: ?>
+                            <?php foreach ($panel['data'] as $item): ?>
+                                <?php
+                                // Build 2-letter initials fallback (e.g. "Ferrari" -> "FE")
+                                $clean = preg_replace('/[^A-Za-z0-9]/', '', $item['name']);
+                                $initials = $clean !== '' ? strtoupper(mb_substr($clean, 0, 2)) : '?';
+                                ?>
+                                <li class="sortable-item" data-id="<?= $item['id'] ?>">
 
-                <!-- Overlay toolbar: drag handle + delete -->
-                <div class="item-card__toolbar">
-                    <span class="drag-handle" title="Drag to reorder">⠿</span>
-                    <form method="POST" class="item-delete-form">
-                        <input type="hidden" name="action" value="delete_item">
-                        <input type="hidden" name="item_id" value="<?= $item['id'] ?>">
-                        <input type="hidden" name="item_table" value="<?= $panel['table'] ?>">
-                        <button type="submit" class="btn-icon" title="Delete">✕</button>
-                    </form>
-                </div>
+                                    <!-- Overlay toolbar: drag handle + delete -->
+                                    <div class="item-card__toolbar">
+                                        <span class="drag-handle" title="Drag to reorder">⠿</span>
+                                        <form method="POST" class="item-delete-form">
+                                            <input type="hidden" name="action" value="delete_item">
+                                            <input type="hidden" name="item_id" value="<?= $item['id'] ?>">
+                                            <input type="hidden" name="item_table" value="<?= $panel['table'] ?>">
+                                            <button type="submit" class="btn-icon" title="Delete">✕</button>
+                                        </form>
+                                    </div>
 
-                <!-- Photo -->
-                <div class="item-photo-wrap">
-                    <?php if (!empty($item['image'])): ?>
-                        <img src="<?= htmlspecialchars($item['image']) ?>" class="item-thumb"
-                            id="thumb-<?= $panel['table'] ?>-<?= $item['id'] ?>"
-                            alt="<?= htmlspecialchars($item['name']) ?>">
-                    <?php else: ?>
-                        <div class="item-thumb item-thumb--empty"
-                            id="thumb-<?= $panel['table'] ?>-<?= $item['id'] ?>">
-                            <?= $initials ?>
-                        </div>
-                    <?php endif; ?>
-                    <label class="item-photo-btn" title="Upload photo"
-                        for="upload-<?= $panel['table'] ?>-<?= $item['id'] ?>">✎</label>
-                    <input type="file" id="upload-<?= $panel['table'] ?>-<?= $item['id'] ?>"
-                        class="item-upload-input" accept="image/*" data-table="<?= $panel['table'] ?>"
-                        data-id="<?= $item['id'] ?>" style="display:none;">
-                </div>
+                                    <!-- Photo -->
+                                    <div class="item-photo-wrap">
+                                        <?php if (!empty($item['image'])): ?>
+                                            <img src="<?= htmlspecialchars($item['image']) ?>" class="item-thumb"
+                                                id="thumb-<?= $panel['table'] ?>-<?= $item['id'] ?>"
+                                                alt="<?= htmlspecialchars($item['name']) ?>">
+                                        <?php else: ?>
+                                            <div class="item-thumb item-thumb--empty" id="thumb-<?= $panel['table'] ?>-<?= $item['id'] ?>">
+                                                <?= $initials ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        <label class="item-photo-btn" title="Upload photo"
+                                            for="upload-<?= $panel['table'] ?>-<?= $item['id'] ?>">✎</label>
+                                        <input type="file" id="upload-<?= $panel['table'] ?>-<?= $item['id'] ?>"
+                                            class="item-upload-input" accept="image/*" data-table="<?= $panel['table'] ?>"
+                                            data-id="<?= $item['id'] ?>" style="display:none;">
+                                    </div>
 
-                <span class="item-name"><?= htmlspecialchars($item['name']) ?></span>
-            </li>
-        <?php endforeach; ?>
-    <?php endif; ?>
-</ul>
+                                    <span class="item-name"><?= htmlspecialchars($item['name']) ?></span>
+                                </li>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </ul>
 
 
                 </div>
@@ -498,9 +495,7 @@ include __DIR__ . '/../../../includes/header.php';
 <script>
     /* ── drag/drop reorder ── */
     (function () {
-        const API = window.location.origin
-            + window.location.pathname.replace(/\/pages\/[^\/]+$/, '')
-            + '/api/reorder_item.php';
+        const API = window.location.origin + '/api/reorder_item.php';
 
         async function saveOrder(list) {
             const table = list.dataset.table;
@@ -556,9 +551,7 @@ include __DIR__ . '/../../../includes/header.php';
 
     /* ── photo upload ── */
     (function () {
-        const UPLOAD_API = window.location.origin
-            + window.location.pathname.replace(/\/pages\/[^\/]+$/, '')
-            + '/api/upload_image.php';
+        const UPLOAD_API = window.location.origin + '/api/upload_image.php';
 
         document.querySelectorAll('.item-upload-input').forEach(input => {
             input.addEventListener('change', async function () {

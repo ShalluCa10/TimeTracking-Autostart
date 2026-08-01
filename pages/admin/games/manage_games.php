@@ -495,9 +495,7 @@ include __DIR__ . '/../../../includes/header.php';
 <script>
     /* ── drag/drop reorder ── */
     (function () {
-        const API = window.location.origin
-            + window.location.pathname.replace(/\/pages\/[^\/]+$/, '')
-            + '/api/reorder_item.php';
+        const API = window.location.origin + '/api/reorder_item.php';
 
         async function saveOrder(list) {
             const table = list.dataset.table;
@@ -553,9 +551,7 @@ include __DIR__ . '/../../../includes/header.php';
 
     /* ── photo upload ── */
     (function () {
-        const UPLOAD_API = window.location.origin
-            + window.location.pathname.replace(/\/pages\/[^\/]+$/, '')
-            + '/api/upload_image.php';
+        const UPLOAD_API = window.location.origin + '/api/upload_image.php';
 
         document.querySelectorAll('.item-upload-input').forEach(input => {
             input.addEventListener('change', async function () {
