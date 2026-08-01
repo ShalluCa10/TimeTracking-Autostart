@@ -1,7 +1,7 @@
 <?php
-require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/helpers.php';
+require_once __DIR__ . '/../../../config/db.php';
+require_once __DIR__ . '/../../../includes/auth.php';
+require_once __DIR__ . '/../../../includes/helpers.php';
 
 requireLogin();
 
@@ -32,9 +32,9 @@ $filterEventId = isset($_GET['event_id']) && (int) $_GET['event_id'] > 0
     : 0;
 
 $allEvents = $conn->query('
-    SELECT event_id, event_name
-    FROM   events
-    ORDER  BY event_date DESC
+    SELECT schedule_id AS event_id, schedule_name AS event_name
+    FROM   schedules
+    ORDER  BY schedule_date DESC
 ')->fetch_all(MYSQLI_ASSOC);
 
 if ($filterEventId > 0) {
@@ -43,11 +43,11 @@ if ($filterEventId > 0) {
                s.participant_name,
                s.best_lap_time,
                s.created_at,
-               e.event_name,
-               e.event_id
+               e.schedule_name AS event_name,
+               e.schedule_id   AS event_id
         FROM   sessions s
-        LEFT JOIN events e ON e.event_id = s.event_id
-        WHERE  s.event_id = ?
+        LEFT JOIN schedules e ON e.schedule_id = s.schedule_id
+        WHERE  s.schedule_id = ?
         ORDER  BY s.created_at DESC
     ');
     $stmt->bind_param('i', $filterEventId);
@@ -60,10 +60,10 @@ if ($filterEventId > 0) {
                s.participant_name,
                s.best_lap_time,
                s.created_at,
-               e.event_name,
-               e.event_id
+               e.schedule_name AS event_name,
+               e.schedule_id   AS event_id
         FROM   sessions s
-        LEFT JOIN events e ON e.event_id = s.event_id
+        LEFT JOIN schedules e ON e.schedule_id = s.schedule_id
         ORDER  BY s.created_at DESC
     ')->fetch_all(MYSQLI_ASSOC);
 }
@@ -81,7 +81,7 @@ if ($filterEventId > 0) {
 }
 
 $pageTitle = 'Sessions';
-include __DIR__ . '/../includes/header.php';
+include __DIR__ . '/../../../includes/header.php';
 
 function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
 ?>
@@ -95,7 +95,7 @@ function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8')
 
 <div class="page-header">
     <h2>Sessions — <?= h($activeEventName) ?></h2>
-    <a href="manage_events.php" class="btn btn-secondary">← Back to Schedules</a>
+    <a href="../schedules/manage_schedules.php" class="btn btn-secondary">← Back to Schedules</a>
 </div>
 
 <!-- Filter Bar -->
@@ -238,4 +238,4 @@ function confirmBulkDelete() {
 }
 </script>
 
-<?php include __DIR__ . '/../includes/footer.php'; ?>
+<?php include __DIR__ . '/../../../includes/footer.php'; ?>

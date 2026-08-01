@@ -1,11 +1,6 @@
--- phpMyAdmin SQL Dump
--- version 5.1.2
--- https://www.phpmyadmin.net/
---
--- Host: localhost:3306
--- Generation Time: Jun 17, 2026 at 03:12 PM
--- Server version: 5.7.24
--- PHP Version: 8.3.1
+-- timetracking schema (schedules/sessions renamed: schedule_id, team, event)
+-- Canonical structure only. Matches the live production schema after running
+-- sql/migrations/2026_07_31_rename_schedule.php.
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -44,17 +39,17 @@ INSERT INTO `admins` (`admin_id`, `username`, `password_hash`, `created_at`) VAL
 -- --------------------------------------------------------
 
 --
--- Table structure for table `events`
+-- Table structure for table `schedules`
 --
 
-CREATE TABLE `events` (
-  `event_id` int(11) NOT NULL,
-  `event_name` varchar(150) NOT NULL,
-  `event_date` date NOT NULL,
+CREATE TABLE `schedules` (
+  `schedule_id` int(11) NOT NULL,
+  `schedule_name` varchar(150) NOT NULL,
+  `schedule_date` date NOT NULL,
   `location` varchar(150) NOT NULL DEFAULT '',
   `version_id` int(11) DEFAULT NULL,
-  `car` varchar(100) DEFAULT NULL,
-  `track` varchar(100) DEFAULT NULL,
+  `team` varchar(100) DEFAULT NULL,
+  `event` varchar(100) DEFAULT NULL,
   `racer` varchar(100) DEFAULT NULL,
   `notes` text,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -62,24 +57,12 @@ CREATE TABLE `events` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
--- Dumping data for table `events`
+-- Dumping data for table `schedules`
 --
 
-INSERT INTO `events` (`event_id`, `event_name`, `event_date`, `location`, `version_id`, `car`, `track`, `racer`, `notes`, `created_at`, `status`) VALUES
+INSERT INTO `schedules` (`schedule_id`, `schedule_name`, `schedule_date`, `location`, `version_id`, `team`, `event`, `racer`, `notes`, `created_at`, `status`) VALUES
 (3, 'New Toronto', '2026-06-10', 'Toronto Hall', 1, 'AMR24', 'Bahrain International Circuit', 'Oscar Piastri (#81)', '', '2026-06-10 00:00:51', 'completed'),
 (4, 'Car Club', '2026-07-10', 'Montreal, QC', 2, 'HAAS', 'Circuit de Spa-Francorchamps', 'Alexander Albon', '', '2026-06-10 04:42:06', 'live');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `games`
---
-
-CREATE TABLE `games` (
-  `game_id` int(11) NOT NULL,
-  `name` varchar(100) NOT NULL,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -202,44 +185,16 @@ INSERT INTO `laps` (`id`, `session_id`, `lap_number`, `lap_time_ms`, `lap_time`,
 -- --------------------------------------------------------
 
 --
--- Table structure for table `results`
---
-
-CREATE TABLE `results` (
-  `result_id` int(11) NOT NULL,
-  `session_id` int(11) NOT NULL,
-  `position` int(11) NOT NULL DEFAULT '0',
-  `best_lap_time` varchar(20) NOT NULL DEFAULT '',
-  `total_time` varchar(50) NOT NULL DEFAULT '',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `rigs`
---
-
-CREATE TABLE `rigs` (
-  `rig_id` int(11) NOT NULL,
-  `name` varchar(150) NOT NULL,
-  `description` text,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `sessions`
 --
 
 CREATE TABLE `sessions` (
   `session_id` int(11) NOT NULL,
-  `event_id` int(11) NOT NULL,
+  `schedule_id` int(11) NOT NULL,
   `f1_version` varchar(50) DEFAULT NULL,
   `participant_name` varchar(120) NOT NULL,
-  `car` varchar(100) NOT NULL DEFAULT '',
-  `track` varchar(100) NOT NULL DEFAULT '',
+  `team` varchar(100) NOT NULL DEFAULT '',
+  `event` varchar(100) NOT NULL DEFAULT '',
   `best_lap_time` varchar(20) NOT NULL DEFAULT '',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -248,7 +203,7 @@ CREATE TABLE `sessions` (
 -- Dumping data for table `sessions`
 --
 
-INSERT INTO `sessions` (`session_id`, `event_id`, `f1_version`, `participant_name`, `car`, `track`, `best_lap_time`, `created_at`) VALUES
+INSERT INTO `sessions` (`session_id`, `schedule_id`, `f1_version`, `participant_name`, `team`, `event`, `best_lap_time`, `created_at`) VALUES
 (3, 3, 'F1 2024', 'đ', 'Red Bull', 'Monza', '00:02.264', '2026-06-10 00:01:08'),
 (4, 3, 'F1 2024', 'đ', 'Red Bull', 'Monza', '', '2026-06-10 00:04:28'),
 (5, 3, 'F1 2024', 'đ', 'Red Bull', 'Monza', '', '2026-06-10 00:09:06'),
@@ -279,18 +234,11 @@ ALTER TABLE `admins`
   ADD UNIQUE KEY `uq_username` (`username`);
 
 --
--- Indexes for table `events`
+-- Indexes for table `schedules`
 --
-ALTER TABLE `events`
-  ADD PRIMARY KEY (`event_id`),
-  ADD KEY `fk_events_version` (`version_id`);
-
---
--- Indexes for table `games`
---
-ALTER TABLE `games`
-  ADD PRIMARY KEY (`game_id`),
-  ADD UNIQUE KEY `name` (`name`);
+ALTER TABLE `schedules`
+  ADD PRIMARY KEY (`schedule_id`),
+  ADD KEY `fk_schedules_version` (`version_id`);
 
 --
 -- Indexes for table `game_teams`
@@ -321,25 +269,11 @@ ALTER TABLE `laps`
   ADD KEY `session_id` (`session_id`);
 
 --
--- Indexes for table `results`
---
-ALTER TABLE `results`
-  ADD PRIMARY KEY (`result_id`),
-  ADD KEY `session_id` (`session_id`);
-
---
--- Indexes for table `rigs`
---
-ALTER TABLE `rigs`
-  ADD PRIMARY KEY (`rig_id`),
-  ADD UNIQUE KEY `name` (`name`);
-
---
 -- Indexes for table `sessions`
 --
 ALTER TABLE `sessions`
   ADD PRIMARY KEY (`session_id`),
-  ADD KEY `event_id` (`event_id`);
+  ADD KEY `schedule_id` (`schedule_id`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -352,16 +286,10 @@ ALTER TABLE `admins`
   MODIFY `admin_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT for table `events`
+-- AUTO_INCREMENT for table `schedules`
 --
-ALTER TABLE `events`
-  MODIFY `event_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
-
---
--- AUTO_INCREMENT for table `games`
---
-ALTER TABLE `games`
-  MODIFY `game_id` int(11) NOT NULL AUTO_INCREMENT;
+ALTER TABLE `schedules`
+  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `game_teams`
@@ -388,18 +316,6 @@ ALTER TABLE `laps`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
--- AUTO_INCREMENT for table `results`
---
-ALTER TABLE `results`
-  MODIFY `result_id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `rigs`
---
-ALTER TABLE `rigs`
-  MODIFY `rig_id` int(11) NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT for table `sessions`
 --
 ALTER TABLE `sessions`
@@ -410,10 +326,10 @@ ALTER TABLE `sessions`
 --
 
 --
--- Constraints for table `events`
+-- Constraints for table `schedules`
 --
-ALTER TABLE `events`
-  ADD CONSTRAINT `fk_events_version` FOREIGN KEY (`version_id`) REFERENCES `game_versions` (`id`) ON DELETE SET NULL;
+ALTER TABLE `schedules`
+  ADD CONSTRAINT `fk_schedules_version` FOREIGN KEY (`version_id`) REFERENCES `game_versions` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `game_teams`
@@ -434,16 +350,10 @@ ALTER TABLE `laps`
   ADD CONSTRAINT `laps_ibfk_1` FOREIGN KEY (`session_id`) REFERENCES `sessions` (`session_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `results`
---
-ALTER TABLE `results`
-  ADD CONSTRAINT `results_ibfk_1` FOREIGN KEY (`session_id`) REFERENCES `sessions` (`session_id`) ON DELETE CASCADE;
-
---
 -- Constraints for table `sessions`
 --
 ALTER TABLE `sessions`
-  ADD CONSTRAINT `sessions_ibfk_1` FOREIGN KEY (`event_id`) REFERENCES `events` (`event_id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `sessions_ibfk_1` FOREIGN KEY (`schedule_id`) REFERENCES `schedules` (`schedule_id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

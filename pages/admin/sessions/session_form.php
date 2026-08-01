@@ -1,8 +1,8 @@
 <?php
-require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/helpers.php';
+require_once __DIR__ . '/../../../config/config.php';
+require_once __DIR__ . '/../../../config/db.php';
+require_once __DIR__ . '/../../../includes/auth.php';
+require_once __DIR__ . '/../../../includes/helpers.php';
 
 requireLogin();
 
@@ -13,7 +13,7 @@ $sessionId = (int) ($_GET['id'] ?? 0);
 $isEdit = $sessionId > 0;
 
 // Load all events for the dropdown
-$events = $conn->query('SELECT event_id, event_name FROM events ORDER BY event_date DESC')
+$events = $conn->query('SELECT schedule_id AS event_id, schedule_name AS event_name FROM schedules ORDER BY schedule_date DESC')
     ->fetch_all(MYSQLI_ASSOC);
 
 // Load all game versions for dropdowns 
@@ -35,7 +35,7 @@ $error = '';
 
 //Load event
 if ($eventId > 0) {
-    $stmt = $conn->prepare('SELECT * FROM events WHERE event_id = ? LIMIT 1');
+    $stmt = $conn->prepare('SELECT schedule_id AS event_id, schedule_name AS event_name FROM schedules WHERE schedule_id = ? LIMIT 1');
     $stmt->bind_param('i', $eventId);
     $stmt->execute();
     $event = $stmt->get_result()->fetch_assoc();
@@ -43,7 +43,11 @@ if ($eventId > 0) {
 }
 
 if ($isEdit) {
-    $stmt = $conn->prepare('SELECT * FROM sessions WHERE session_id = ? LIMIT 1');
+    $stmt = $conn->prepare('
+        SELECT session_id, schedule_id AS event_id, f1_version, participant_name,
+               team AS car, event AS track, best_lap_time, created_at
+        FROM sessions WHERE session_id = ? LIMIT 1
+    ');
     $stmt->bind_param('i', $sessionId);
     $stmt->execute();
     $session = $stmt->get_result()->fetch_assoc();
@@ -59,7 +63,7 @@ if ($isEdit) {
 
         // Load event if not already loaded
         if (!$event) {
-            $stmt = $conn->prepare('SELECT * FROM events WHERE event_id = ? LIMIT 1');
+            $stmt = $conn->prepare('SELECT schedule_id AS event_id, schedule_name AS event_name FROM schedules WHERE schedule_id = ? LIMIT 1');
             $stmt->bind_param('i', $eventId);
             $stmt->execute();
             $event = $stmt->get_result()->fetch_assoc();
@@ -74,7 +78,7 @@ if ($isEdit) {
             }
         }
     } else {
-        header('Location: dashboard.php');
+        header('Location: ../dashboard.php');
         exit();
     }
 }
@@ -103,25 +107,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['participant_name'])) 
     $track = trim($_POST['track'] ?? '');
     $eventId = (int) ($_POST['event_id'] ?? 0);
 
-    if ($participantName === '') {
-        $error = 'Participant name is required.';
-    } elseif ($eventId === 0) {
-        $error = 'Please select a schedule.';
+    if ($eventId === 0) {
+        $error = 'Please select an event.';
     } elseif ($f1Version === '') {
         $error = 'Please select a game version.';
-    } elseif ($car === '') {
-        $error = 'Please select a car.';
-    } elseif ($track === '') {
-        $error = 'Please select a track.';
     } else {
         if ($isEdit) {
             $stmt = $conn->prepare(
-                'UPDATE sessions SET participant_name = ?, best_lap_time = ?, f1_version = ?, car = ?, track = ? WHERE session_id = ?'
+                'UPDATE sessions SET participant_name = ?, best_lap_time = ?, f1_version = ?, team = ?, event = ? WHERE session_id = ?'
             );
             $stmt->bind_param('sssssi', $participantName, $bestLapTime, $f1Version, $car, $track, $sessionId);
         } else {
             $stmt = $conn->prepare(
-                'INSERT INTO sessions (event_id, participant_name, best_lap_time, f1_version, car, track) VALUES (?, ?, ?, ?, ?, ?)'
+                'INSERT INTO sessions (schedule_id, participant_name, best_lap_time, f1_version, team, event) VALUES (?, ?, ?, ?, ?, ?)'
             );
             $stmt->bind_param('isssss', $eventId, $participantName, $bestLapTime, $f1Version, $car, $track);
         }
@@ -130,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['participant_name'])) 
         $conn->close();
 
         setFlash('success', $isEdit ? 'Session updated.' : 'Session added.');
-        header('Location: event_detail.php?id=' . $eventId);
+        header('Location: ../schedules/schedule_detail.php?id=' . $eventId);
         exit();
     }
 }
@@ -138,11 +136,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['participant_name'])) 
 $conn->close();
 
 $pageTitle = $isEdit ? 'Edit Session' : 'Add Session';
-include __DIR__ . '/../includes/header.php';
+include __DIR__ . '/../../../includes/header.php';
 ?>
 
 <div class="page-header">
-    <a href="event_detail.php?id=<?= $eventId ?>" class="back-link">← Back to Schedule</a>
+    <a href="../schedules/schedule_detail.php?id=<?= $eventId ?>" class="back-link">← Back to Event</a>
     <h2><?= $isEdit ? 'Edit Session' : 'Add Session' ?></h2>
 </div>
 
@@ -155,10 +153,10 @@ include __DIR__ . '/../includes/header.php';
     <!-- Event -->
     <?php if (!$isEdit): ?>
         <div class="form-group">
-            <label for="event_id">Schedule</label>
+            <label for="event_id">Event</label>
             <select id="event_id" name="event_id" required
                 onchange="window.location.href='session_form.php?event_id=' + this.value">
-                <option value="">— Select Schedule —</option>
+                <option value="">— Select Event —</option>
                 <?php foreach ($events as $ev): ?>
                     <option value="<?= $ev['event_id'] ?>" <?= $ev['event_id'] == $eventId ? 'selected' : '' ?>>
                         <?= htmlspecialchars($ev['event_name']) ?>
@@ -167,7 +165,7 @@ include __DIR__ . '/../includes/header.php';
             </select>
         </div>
     <?php else: ?>
-        <p class="form-readonly">Schedule: <strong><?= htmlspecialchars($event['event_name'] ?? '—') ?></strong></p>
+        <p class="form-readonly">Event: <strong><?= htmlspecialchars($event['event_name'] ?? '—') ?></strong></p>
         <input type="hidden" name="event_id" value="<?= $eventId ?>">
     <?php endif; ?>
 
@@ -186,8 +184,8 @@ include __DIR__ . '/../includes/header.php';
 
     <!-- Track -->
     <div class="form-group">
-        <label for="sel-track">🏁 Schedule</label>
-        <select id="sel-track" name="track" required <?= $selectedVersion === 0 ? 'disabled' : '' ?>>
+        <label for="sel-track">🏁 Event</label>
+        <select id="sel-track" name="track" <?= $selectedVersion === 0 ? 'disabled' : '' ?>>
             <option value="">— Select Version First —</option>
             <?php foreach ($tracks as $t): ?>
                 <option value="<?= htmlspecialchars($t['name']) ?>" <?= $t['name'] === $track ? 'selected' : '' ?>>
@@ -200,7 +198,7 @@ include __DIR__ . '/../includes/header.php';
     <!-- Car -->
     <div class="form-group">
         <label for="sel-car">🚗 Team</label>
-        <select id="sel-car" name="car" required <?= $selectedVersion === 0 ? 'disabled' : '' ?>>
+        <select id="sel-car" name="car" <?= $selectedVersion === 0 ? 'disabled' : '' ?>>
             <option value="">— Select Version First —</option>
             <?php foreach ($cars as $c): ?>
                 <option value="<?= htmlspecialchars($c['name']) ?>" <?= $c['name'] === $car ? 'selected' : '' ?>>
@@ -214,7 +212,7 @@ include __DIR__ . '/../includes/header.php';
     <div class="form-group">
         <label for="participant_name">👤 Participant</label>
         <input type="text" id="participant_name" name="participant_name" value="<?= htmlspecialchars($participantName) ?>"
-            placeholder="e.g. Oscar Piastri" required>
+            placeholder="e.g. Oscar Piastri">
     </div>
 
     <!-- Best Lap Time -->
@@ -229,7 +227,7 @@ include __DIR__ . '/../includes/header.php';
         <button type="submit" class="btn btn--primary">
             <?= $isEdit ? 'Update Session' : 'Save Session' ?>
         </button>
-        <a href="event_detail.php?id=<?= $eventId ?>" class="btn btn--outline">Cancel</a>
+        <a href="../schedules/schedule_detail.php?id=<?= $eventId ?>" class="btn btn--outline">Cancel</a>
     </div>
 
 </form>
@@ -265,8 +263,8 @@ include __DIR__ . '/../includes/header.php';
             resetSelect(selCar, '— Loading... —');
 
             const [tracks, cars] = await Promise.all([
-                fetch(`../api/get_options.php?type=tracks&version_id=${versionId}`).then(r => r.json()),
-                fetch(`../api/get_options.php?type=cars&version_id=${versionId}`).then(r => r.json()),
+                fetch(`/api/get_options.php?type=tracks&version_id=${versionId}`).then(r => r.json()),
+                fetch(`/api/get_options.php?type=cars&version_id=${versionId}`).then(r => r.json()),
             ]);
 
             populate(selTrack, tracks, savedTrack, tracks.length ? '— Select Schedule —' : '— No schedules —');

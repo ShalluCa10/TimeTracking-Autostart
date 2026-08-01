@@ -1,7 +1,7 @@
 <?php
-require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/helpers.php';
+require_once __DIR__ . '/../../../config/db.php';
+require_once __DIR__ . '/../../../includes/auth.php';
+require_once __DIR__ . '/../../../includes/helpers.php';
 
 requireLogin();
 
@@ -10,32 +10,34 @@ $conn = getConnection();
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['_action'] ?? '') === 'delete') {
     $delId = (int) ($_POST['event_id'] ?? 0);
     if ($delId > 0) {
-        $stmt = $conn->prepare('DELETE FROM events WHERE event_id = ?');
+        $stmt = $conn->prepare('DELETE FROM schedules WHERE schedule_id = ?');
         $stmt->bind_param('i', $delId);
         $stmt->execute();
         $stmt->close();
         $_SESSION['flash'] = ['type' => 'success', 'message' => 'Schedule deleted.'];
     }
     $conn->close();
-    header('Location: manage_events.php');
+    header('Location: manage_schedules.php');
     exit();
 }
 
 $events = $conn->query('
-    SELECT e.*,
+    SELECT e.schedule_id AS event_id, e.schedule_name AS event_name, e.schedule_date AS event_date,
+           e.location, e.version_id, e.team AS car, e.event AS track, e.racer, e.notes,
+           e.created_at, e.status,
            COUNT(s.session_id) AS session_count,
            gv.name             AS version_name
-    FROM   events e
-    LEFT JOIN sessions      s  ON s.event_id  = e.event_id
-    LEFT JOIN game_versions gv ON gv.id        = e.version_id
-    GROUP BY e.event_id
-    ORDER BY e.event_date DESC
+    FROM   schedules e
+    LEFT JOIN sessions      s  ON s.schedule_id  = e.schedule_id
+    LEFT JOIN game_versions gv ON gv.id           = e.version_id
+    GROUP BY e.schedule_id
+    ORDER BY e.schedule_date DESC
 ')->fetch_all(MYSQLI_ASSOC);
 
 $conn->close();
 
 $pageTitle = 'Manage Schedules';
-include __DIR__ . '/../includes/header.php';
+include __DIR__ . '/../../../includes/header.php';
 
 function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
 ?>
@@ -47,14 +49,14 @@ function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8')
     </div>
 <?php endif; ?>
 
-<div class="page-header">
-    <h2>Manage Schedules</h2>
-    <a href="event_form.php" class="btn btn-primary">+ New Schedule</a>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="h4 fw-bold text-uppercase mb-0">Manage Schedules</h2>
+    <a href="schedule_form.php" class="btn btn-primary">+ New Schedule</a>
 </div>
 
 <div class="card">
     <?php if (empty($events)): ?>
-        <p class="empty-state">No schedules yet. Create one to get started.</p>
+        <p class="text-muted py-4 mb-0">No schedules yet. Create one to get started.</p>
     <?php else: ?>
         <div class="table-responsive">
             <table class="table table-borderless mb-0">
@@ -111,22 +113,22 @@ function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8')
                         </td>
                         <td>
                             <div class="d-flex flex-wrap gap-1">
-                                <a href="event_form.php?id=<?= $event['event_id'] ?>"
+                                <a href="schedule_form.php?id=<?= $event['event_id'] ?>"
                                     class="btn btn-secondary btn-sm">Edit</a>
-                                <a href="sessions.php?event_id=<?= $event['event_id'] ?>"
+                                <a href="../sessions/sessions.php?event_id=<?= $event['event_id'] ?>"
                                     class="btn btn-secondary btn-sm">Sessions</a>
                                 <?php if ($statusKey === 'live'): ?>
-                                    <form method="POST" action="event_status.php">
+                                    <form method="POST" action="schedule_status.php">
                                         <input type="hidden" name="event_id" value="<?= $event['event_id'] ?>">
                                         <input type="hidden" name="status" value="completed">
-                                        <input type="hidden" name="redirect" value="manage_events.php">
+                                        <input type="hidden" name="redirect" value="manage_schedules.php">
                                         <button type="submit" class="btn btn-secondary btn-sm">End Schedule</button>
                                     </form>
                                 <?php elseif ($statusKey === 'upcoming'): ?>
-                                    <form method="POST" action="event_status.php">
+                                    <form method="POST" action="schedule_status.php">
                                         <input type="hidden" name="event_id" value="<?= $event['event_id'] ?>">
                                         <input type="hidden" name="status" value="live">
-                                        <input type="hidden" name="redirect" value="manage_events.php">
+                                        <input type="hidden" name="redirect" value="manage_schedules.php">
                                         <button type="submit" class="btn btn-secondary btn-sm">Go Live</button>
                                     </form>
                                 <?php endif; ?>
@@ -146,4 +148,4 @@ function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8')
     <?php endif; ?>
 </div>
 
-<?php include __DIR__ . '/../includes/footer.php'; ?>
+<?php include __DIR__ . '/../../../includes/footer.php'; ?>

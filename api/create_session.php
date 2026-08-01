@@ -21,10 +21,10 @@ if ($action === 'create') {
 
     // Pull selected options from the event
     $stmt = $conn->prepare('
-        SELECT e.car, e.track, e.racer, gv.name AS f1_version
-        FROM events e
+        SELECT e.team AS car, e.event AS track, e.racer, gv.name AS f1_version
+        FROM schedules e
         LEFT JOIN game_versions gv ON gv.id = e.version_id
-        WHERE e.event_id = ?
+        WHERE e.schedule_id = ?
         LIMIT 1
     ');
     $stmt->bind_param('i', $eventId);
@@ -43,7 +43,7 @@ if ($action === 'create') {
     $f1Version = $event['f1_version'] ?? '';
 
     $stmt = $conn->prepare('
-        INSERT INTO sessions (event_id, participant_name, f1_version, car, track, best_lap_time)
+        INSERT INTO sessions (schedule_id, participant_name, f1_version, team, event, best_lap_time)
         VALUES (?, ?, ?, ?, ?, \'\')
     ');
     $stmt->bind_param('issss', $eventId, $racer, $f1Version, $car, $track);

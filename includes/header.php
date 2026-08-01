@@ -23,7 +23,7 @@ if (!defined('APP_NAME'))  define('APP_NAME', 'F1 Lap Simulator');
 <body>
    <nav class="navbar navbar-expand-lg">
     <div class="container-fluid px-4">
-        <a class="navbar-brand" href="/pages/dashboard.php"><?= APP_NAME ?></a>
+        <a class="navbar-brand" href="/pages/admin/dashboard.php"><?= APP_NAME ?></a>
 
         <button class="navbar-toggler" type="button"
                 data-bs-toggle="collapse" data-bs-target="#mainNav">
@@ -34,16 +34,19 @@ if (!defined('APP_NAME'))  define('APP_NAME', 'F1 Lap Simulator');
             <!-- Center links -->
             <ul class="navbar-nav mx-auto">
                 <li class="nav-item">
-                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'dashboard.php'     ? 'active' : '' ?>" href="/pages/dashboard.php">Dashboard</a>
+                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'dashboard.php'     ? 'active' : '' ?>" href="/pages/admin/dashboard.php">Dashboard</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'manage_events.php' ? 'active' : '' ?>" href="/pages/manage_events.php">Manage Schedules</a>
+                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'manage_schedules.php' ? 'active' : '' ?>" href="/pages/admin/schedules/manage_schedules.php">Manage Schedules</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'simulation.php'    ? 'active' : '' ?>" href="/simulation.php">Simulator</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'manage_games.php'  ? 'active' : '' ?>" href="/pages/manage_games.php">Manage Game</a>
+                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'leaderboard.php'   ? 'active' : '' ?>" href="/leaderboard.php">Leaderboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'manage_games.php'  ? 'active' : '' ?>" href="/pages/admin/games/manage_games.php">Manage Game</a>
                 </li>
             </ul>
 

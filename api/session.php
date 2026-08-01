@@ -18,7 +18,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // ── GET /api/session.php?action=sessions&event_id=1 ──
     if ($action === 'sessions' && !empty($_GET['event_id'])) {
         $eventId = (int) $_GET['event_id'];
-        $stmt = $conn->prepare('SELECT * FROM sessions WHERE event_id = ? ORDER BY session_id DESC');
+        $stmt = $conn->prepare('
+            SELECT session_id, schedule_id AS event_id, f1_version, participant_name,
+                   team AS car, event AS track, best_lap_time, created_at
+            FROM sessions WHERE schedule_id = ? ORDER BY session_id DESC
+        ');
         $stmt->bind_param('i', $eventId);
         $stmt->execute();
         $sessions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -31,7 +35,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($action === 'session' && !empty($_GET['session_id'])) {
         $sessionId = (int) $_GET['session_id'];
 
-        $stmt = $conn->prepare('SELECT * FROM sessions WHERE session_id = ? LIMIT 1');
+        $stmt = $conn->prepare('
+            SELECT session_id, schedule_id AS event_id, f1_version, participant_name,
+                   team AS car, event AS track, best_lap_time, created_at
+            FROM sessions WHERE session_id = ? LIMIT 1
+        ');
         $stmt->bind_param('i', $sessionId);
         $stmt->execute();
         $session = $stmt->get_result()->fetch_assoc();
@@ -52,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // Include event
         $event = null;
         if (!empty($session['event_id'])) {
-            $e = $conn->prepare('SELECT * FROM events WHERE event_id = ? LIMIT 1');
+            $e = $conn->prepare('SELECT schedule_id AS event_id, schedule_name AS event_name, team AS car, event AS track, racer FROM schedules WHERE schedule_id = ? LIMIT 1');
             $e->bind_param('i', $session['event_id']);
             $e->execute();
             $event = $e->get_result()->fetch_assoc();
@@ -70,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     
     if ($action === 'next') {
-        $stmt = $conn->prepare('SELECT * FROM sessions ORDER BY session_id DESC LIMIT 1');
+        $stmt = $conn->prepare('SELECT session_id, schedule_id AS event_id, f1_version, participant_name, team AS car, event AS track, best_lap_time, created_at FROM sessions ORDER BY session_id DESC LIMIT 1');
         $stmt->execute();
         $nextSession = $stmt->get_result()->fetch_assoc();
         $stmt->close();
@@ -82,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
         $event = null;
         if (!empty($nextSession['event_id'])) {
-            $e = $conn->prepare('SELECT * FROM events WHERE event_id = ? LIMIT 1');
+            $e = $conn->prepare('SELECT schedule_id AS event_id, schedule_name AS event_name, team AS car, event AS track, racer FROM schedules WHERE schedule_id = ? LIMIT 1');
             $e->bind_param('i', $nextSession['event_id']);
             $e->execute();
             $event = $e->get_result()->fetch_assoc();
@@ -93,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit();
     }
 
-    $result = $conn->query('SELECT * FROM events ORDER BY event_date DESC');
+    $result = $conn->query('SELECT schedule_id AS event_id, schedule_name AS event_name, schedule_date AS event_date, team AS car, event AS track, racer, status FROM schedules ORDER BY schedule_date DESC');
     $events = $result->fetch_all(MYSQLI_ASSOC);
     echo json_encode(['success' => true, 'events' => $events]);
     exit();
@@ -128,7 +136,7 @@ if ($eventId === 0 || $participantName === '') {
 }
 
 $stmt = $conn->prepare(
-    'INSERT INTO sessions (event_id, participant_name, f1_version, car, track, best_lap_time) VALUES (?, ?, ?, ?, ?, ?)'
+    'INSERT INTO sessions (schedule_id, participant_name, f1_version, team, event, best_lap_time) VALUES (?, ?, ?, ?, ?, ?)'
 );
 $stmt->bind_param('isssss', $eventId, $participantName, $f1Version, $car, $track, $bestLapTime);
 $stmt->execute();

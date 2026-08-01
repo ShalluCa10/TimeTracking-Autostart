@@ -1,8 +1,8 @@
 <?php
-require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/helpers.php';
+require_once __DIR__ . '/../../../config/config.php';
+require_once __DIR__ . '/../../../config/db.php';
+require_once __DIR__ . '/../../../includes/auth.php';
+require_once __DIR__ . '/../../../includes/helpers.php';
 
 requireLogin();
 
@@ -26,14 +26,18 @@ $versions = $conn->query('SELECT id, name FROM game_versions ORDER BY name ASC')
     ->fetch_all(MYSQLI_ASSOC);
 
 if ($isEdit) {
-    $stmt = $conn->prepare('SELECT * FROM events WHERE event_id = ? LIMIT 1');
+    $stmt = $conn->prepare('
+        SELECT schedule_id AS event_id, schedule_name AS event_name, schedule_date AS event_date,
+               location, version_id, team AS car, event AS track, racer, notes, created_at, status
+        FROM schedules WHERE schedule_id = ? LIMIT 1
+    ');
     $stmt->bind_param('i', $eventId);
     $stmt->execute();
     $event = $stmt->get_result()->fetch_assoc();
     $stmt->close();
     if (!$event) {
         $conn->close();
-        header('Location: dashboard.php');
+        header('Location: ../dashboard.php');
         exit();
     }
     $values = array_merge($values, $event);
@@ -69,28 +73,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $values['racer'] = trim($_POST['racer'] ?? '');
     $values['status'] = trim($_POST['status'] ?? 'auto');
     if ($values['event_name'] === '')
-        $errors[] = 'Schedule name is required.';
+        $errors[] = 'Event name is required.';
     if ($values['event_date'] === '')
         $errors[] = 'Date is required.';
     if ($values['version_id'] === 0)
         $errors[] = 'Please select a game version.';
-    if ($values['car'] === '')
-        $errors[] = 'Please select a car.';
-    if ($values['track'] === '')
-        $errors[] = 'Please select a track.';
-    if ($values['racer'] === '')
-        $errors[] = 'Please select a racer.';
     $allowed = ['auto', 'live', 'completed'];
     if (!in_array($values['status'], $allowed))
         $errors[] = 'Invalid status selected.';
     if (empty($errors)) {
         if ($isEdit) {
             $stmt = $conn->prepare('
-                UPDATE events
-                SET event_name = ?, event_date = ?, location = ?,
-                    notes = ?, version_id = ?, car = ?, track = ?, racer = ?,
+                UPDATE schedules
+                SET schedule_name = ?, schedule_date = ?, location = ?,
+                    notes = ?, version_id = ?, team = ?, event = ?, racer = ?,
                     status = ?
-                WHERE event_id = ?
+                WHERE schedule_id = ?
             ');
             $stmt->bind_param(
                 'ssssissssi',
@@ -107,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
         } else {
             $stmt = $conn->prepare('
-                INSERT INTO events (event_name, event_date, location, notes, version_id, car, track, racer, status)
+                INSERT INTO schedules (schedule_name, schedule_date, location, notes, version_id, team, event, racer, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ');
             $stmt->bind_param(
@@ -126,16 +124,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute();
         $stmt->close();
         $conn->close();
-        $_SESSION['flash'] = ['type' => 'success', 'message' => $isEdit ? 'Schedule updated.' : 'Schedule created.'];
-        header('Location: dashboard.php');
+        $_SESSION['flash'] = ['type' => 'success', 'message' => $isEdit ? 'Event updated.' : 'Event created.'];
+        header('Location: ../dashboard.php');
         exit();
     }
 }
 
 $conn->close();
 
-$pageTitle = $isEdit ? 'Edit Schedule' : 'New Schedule';
-include __DIR__ . '/../includes/header.php';
+$pageTitle = $isEdit ? 'Edit Event' : 'New Event';
+include __DIR__ . '/../../../includes/header.php';
 
 function h(string $s): string
 {
@@ -165,7 +163,7 @@ function emptyClass(bool $condition): string
 
 <div class="page-header">
     <h2><?= $pageTitle ?></h2>
-    <a href="dashboard.php" class="btn btn-secondary">← Back</a>
+    <a href="../dashboard.php" class="btn btn-secondary">← Back</a>
 </div>
 
 <?php if (!empty($errors)): ?>
@@ -187,7 +185,7 @@ function emptyClass(bool $condition): string
                 <form method="POST">
                     <div class="row g-3 mb-3">
                         <div class="col-md-8">
-                            <label for="event_name" class="form-label">Schedule Name <span
+                            <label for="event_name" class="form-label">Event Name <span
                                     class="text-danger">*</span></label>
                             <input type="text" id="event_name" name="event_name" class="form-control"
                                 value="<?= h($values['event_name']) ?>" required autofocus
@@ -223,12 +221,12 @@ function emptyClass(bool $condition): string
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label for="sel-track" class="form-label">Schedule <span class="text-danger">*</span></label>
+                            <label for="sel-track" class="form-label">Event <span class="text-danger">*</span></label>
                             <select id="sel-track" name="track"
-                                class="form-select <?= emptyClass($values['track'] === '') ?>" required
+                                class="form-select <?= emptyClass($values['track'] === '') ?>"
                                 <?= dis($selectedVersion === 0) ?>>
                                 <option value="" disabled selected>
-                                    <?= $selectedVersion === 0 ? 'Select Version First' : 'Select Track' ?>
+                                    <?= $selectedVersion === 0 ? 'Select Version First' : 'Select Event' ?>
                                 </option>
                                 <?php foreach ($tracks as $t): ?>
                                     <option value="<?= h($t['name']) ?>" <?= sel($values['track'], $t['name']) ?>>
@@ -240,9 +238,9 @@ function emptyClass(bool $condition): string
                         <div class="col-md-6">
                             <label for="sel-car" class="form-label">Team <span class="text-danger">*</span></label>
                             <select id="sel-car" name="car" class="form-select <?= emptyClass($values['car'] === '') ?>"
-                                required <?= dis($selectedVersion === 0) ?>>
+                                <?= dis($selectedVersion === 0) ?>>
                                 <option value="" disabled selected>
-                                    <?= $selectedVersion === 0 ? 'Select Version First' : 'Select Car' ?>
+                                    <?= $selectedVersion === 0 ? 'Select Version First' : 'Select Team' ?>
                                 </option>
                                 <?php foreach ($cars as $c): ?>
                                     <option value="<?= h($c['name']) ?>" <?= sel($values['car'], $c['name']) ?>>
@@ -253,23 +251,21 @@ function emptyClass(bool $condition): string
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="racer" class="form-label">Participant <span class="text-danger">*</span></label>
+                        <label for="racer" class="form-label">Participant</label>
                         <input type="text" id="racer" name="racer" class="form-control <?= emptyClass($values['racer'] === '') ?>"
-                            value="<?= h($values['racer']) ?>" required placeholder="e.g. Oscar Piastri">
+                            value="<?= h($values['racer']) ?>" placeholder="e.g. Oscar Piastri">
                     </div>
-                    <?php if ($isEdit): ?>
-                        <div class="mb-1 mt-4">
-                            <span class="form-section__label">Schedule Status</span>
-                        </div>
-                        <div class="mb-3">
-                            <label for="sel-status" class="form-label">Status <span class="text-danger">*</span></label>
-                            <select id="sel-status" name="status" class="form-select" required>
-                                <option value="auto" <?= sel($values['status'], 'auto') ?>>Upcoming</option>
-                                <option value="live" <?= sel($values['status'], 'live') ?>>Live</option>
-                                <option value="completed" <?= sel($values['status'], 'completed') ?>>Completed</option>
-                            </select>
-                        </div>
-                    <?php endif; ?>
+                    <div class="mb-1 mt-4">
+                        <span class="form-section__label">Event Status</span>
+                    </div>
+                    <div class="mb-3">
+                        <label for="sel-status" class="form-label">Status <span class="text-danger">*</span></label>
+                        <select id="sel-status" name="status" class="form-select" required>
+                            <option value="auto" <?= sel($values['status'], 'auto') ?>>Upcoming</option>
+                            <option value="live" <?= sel($values['status'], 'live') ?>>Live</option>
+                            <option value="completed" <?= sel($values['status'], 'completed') ?>>Completed</option>
+                        </select>
+                    </div>
                     <div class="mb-4">
                         <label for="notes" class="form-label">Notes</label>
                         <textarea id="notes" name="notes" class="form-control" rows="3"
@@ -277,7 +273,7 @@ function emptyClass(bool $condition): string
                     </div>
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
-                            <?= $isEdit ? 'Save Changes' : 'Create Schedule' ?>
+                            <?= $isEdit ? 'Save Event' : 'Create Event' ?>
                         </button>
                     </div>
                 </form>
@@ -327,7 +323,7 @@ function emptyClass(bool $condition): string
                     fetch(`${API_URL}?type=tracks&version_id=${versionId}`).then(r => r.json()),
                     fetch(`${API_URL}?type=cars&version_id=${versionId}`).then(r => r.json()),
                 ]);
-                populate(selTrack, tracks, restoreTrack, tracks.length ? 'Select Schedule' : 'No schedules');
+                populate(selTrack, tracks, restoreTrack, tracks.length ? 'Select Event' : 'No events');
                 populate(selCar, cars, restoreCar, cars.length ? 'Select Team' : 'No teams');
                 if (selRacer.value === '') {
                     selRacer.value = restoreRacer || '';
@@ -361,4 +357,4 @@ function emptyClass(bool $condition): string
     })();
 </script>
 
-<?php include __DIR__ . '/../includes/footer.php'; ?>
+<?php include __DIR__ . '/../../../includes/footer.php'; ?>

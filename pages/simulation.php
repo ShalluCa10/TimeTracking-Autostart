@@ -1,29 +1,28 @@
+<!-- This is forr the capstone class, before actually toggle on python code.-->
+
 <?php
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/helpers.php';
-
-requireLogin();
 
 $conn = getConnection();
 $sessionId = (int) ($_GET['session_id'] ?? 0);
 $eventId = (int) ($_GET['event_id'] ?? 0);
 
 $events = $conn->query("
-    SELECT event_id, event_name, car, track, racer
-    FROM   events
+    SELECT schedule_id AS event_id, schedule_name AS event_name, team AS car, event AS track, racer
+    FROM   schedules
     WHERE  status = 'live'
-    ORDER  BY event_date DESC
+    ORDER  BY schedule_date DESC
 ")->fetch_all(MYSQLI_ASSOC);
 
 $conn->close();
 
 $pageTitle = 'Simulator';
-include __DIR__ . '/../includes/header.php';
+include __DIR__ . '/../includes/public_header.php';
 ?>
 
-<link rel="stylesheet" href="/assets/css/simulation.css">
+<link rel="stylesheet" href="/assets/css/style.css">
 
 <div class="sim-wrapper py-4">
 
@@ -39,7 +38,7 @@ include __DIR__ . '/../includes/header.php';
             <?php if (empty($events)): ?>
                 <p class="sim-empty">
                     No live schedules available.
-                    <a href="/pages/manage_events.php">Go live on a schedule first.</a>
+                    <a href="/pages/admin/schedules/manage_schedules.php">Go live on a schedule first.</a>
                 </p>
             <?php else: ?>
 
@@ -60,9 +59,9 @@ include __DIR__ . '/../includes/header.php';
 
                 <!-- Event preview -->
                 <div id="event-preview" class="sim-pre__preview" style="display:none;">
-                    <div class="sim-pre__detail"><span>Car</span> <strong id="prev-car">—</strong></div>
-                    <div class="sim-pre__detail"><span>Track</span> <strong id="prev-track">—</strong></div>
-                    <div class="sim-pre__detail"><span>Racer</span> <strong id="prev-racer">—</strong></div>
+                    <div class="sim-pre__detail"><span>Team</span> <strong id="prev-car">—</strong></div>
+                    <div class="sim-pre__detail"><span>Event</span> <strong id="prev-track">—</strong></div>
+                    <div class="sim-pre__detail"><span>Participant</span> <strong id="prev-racer">—</strong></div>
                 </div>
 
                 <p id="selector-status" style="font-size:0.8rem; min-height:1.2em; color:#8888aa; margin-bottom:0;"></p>
@@ -106,19 +105,19 @@ include __DIR__ . '/../includes/header.php';
             <div class="mimicry-title">⚙ INITIALIZING SESSION</div>
 
             <div class="mimicry-row" id="mim-racer">
-                <span class="mimicry-label">RACER</span>
+                <span class="mimicry-label">PARTICIPANT</span>
                 <span class="mimicry-arrows" id="mim-racer-arrows"></span>
                 <span class="mimicry-confirm" id="mim-racer-confirm"></span>
             </div>
 
             <div class="mimicry-row" id="mim-track">
-                <span class="mimicry-label">TRACK</span>
+                <span class="mimicry-label">EVENT</span>
                 <span class="mimicry-arrows" id="mim-track-arrows"></span>
                 <span class="mimicry-confirm" id="mim-track-confirm"></span>
             </div>
 
             <div class="mimicry-row" id="mim-car">
-                <span class="mimicry-label">CAR</span>
+                <span class="mimicry-label">TEAM</span>
                 <span class="mimicry-arrows" id="mim-car-arrows"></span>
                 <span class="mimicry-confirm" id="mim-car-confirm"></span>
             </div>
