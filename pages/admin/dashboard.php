@@ -7,9 +7,9 @@ require_once __DIR__ . '/../../includes/helpers.php';
 $conn = getConnection();
 requireLogin();
 
-$events = $conn->query('
-    SELECT e.schedule_id AS event_id, e.schedule_name AS event_name, e.schedule_date AS event_date,
-           e.location, e.version_id, e.team AS car, e.event AS track, e.racer, e.notes,
+$schedules = $conn->query('
+    SELECT e.schedule_id, e.schedule_name, e.schedule_date,
+           e.location, e.version_id, e.team AS team, e.event AS event, e.racer, e.notes,
            e.created_at, e.status,
            COUNT(s.session_id) AS session_count,
            gv.name             AS version_name
@@ -23,9 +23,9 @@ $events = $conn->query('
 $recentLaps = $conn->query('
     SELECT l.lap_number, l.lap_time, l.lap_time_ms,
            s.session_id,
-           e.schedule_name AS event_name,
-           e.racer,
-           e.event AS track
+           e.schedule_name,
+        e.team AS team,
+        e.event AS event
     FROM   laps     l
     JOIN   sessions  s ON s.session_id  = l.session_id
     JOIN   schedules e ON e.schedule_id = s.schedule_id
@@ -58,11 +58,11 @@ include __DIR__ . '/../../includes/header.php';
         <h3>Schedules</h3>
         <span class="text-muted"
             style="font-size:0.75rem; font-family:'Barlow Condensed',sans-serif; letter-spacing:0.05em;">
-            <?= count($events) ?> total
+            <?= count($schedules) ?> total
         </span>
     </div>
 
-    <?php if (empty($events)): ?>
+    <?php if (empty($schedules)): ?>
         <p class="text-muted py-4 mb-0">No schedules yet. Create one to get started.</p>
     <?php else: ?>
         <div class="table-responsive">
@@ -78,35 +78,35 @@ include __DIR__ . '/../../includes/header.php';
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($events as $event):
-                        [$statusKey, $statusLabel, $statusClass] = resolveEventStatus(
-                            $event['status'] ?? 'auto',
-                            $event['event_date']
+                    <?php foreach ($schedules as $schedule):
+                        [$statusKey, $statusLabel, $statusClass] = resolveScheduleStatus(
+                            $schedule['status'] ?? 'auto',
+                            $schedule['schedule_date']
                         );
                         ?>
                         <tr>
-                            <td><strong><?= htmlspecialchars($event['event_name']) ?></strong></td>
-                            <td><?= htmlspecialchars($event['event_date']) ?></td>
+                            <td><strong><?= htmlspecialchars($schedule['schedule_name']) ?></strong></td>
+                            <td><?= htmlspecialchars($schedule['schedule_date']) ?></td>
                             <td>
-                                <div class="event-details">
-                                    <?php if (!empty($event['version_name'])): ?>
+                                <div class="schedule-details">
+                                    <?php if (!empty($schedule['version_name'])): ?>
                                         <span class="detail-tag detail-version">
-                                            <?= htmlspecialchars($event['version_name']) ?>
+                                            <?= htmlspecialchars($schedule['version_name']) ?>
                                         </span>
                                     <?php endif; ?>
-                                    <?php if (!empty($event['track'])): ?>
-                                        <span class="detail-tag detail-track">
-                                            <?= htmlspecialchars($event['track']) ?>
+                                    <?php if (!empty($schedule['event'])): ?>
+                                        <span class="detail-tag detail-event">
+                                            <?= htmlspecialchars($schedule['event']) ?>
                                         </span>
                                     <?php endif; ?>
-                                    <?php if (!empty($event['racer'])): ?>
-                                        <span class="detail-tag detail-racer">
-                                            <?= htmlspecialchars($event['racer']) ?>
+                                    <?php if (!empty($schedule['team'])): ?>
+                                        <span class="detail-tag detail-team">
+                                            <?= htmlspecialchars($schedule['team']) ?>
                                         </span>
                                     <?php endif; ?>
                                 </div>
                             </td>
-                            <td><?= (int) $event['session_count'] ?></td>
+                            <td><?= (int) $schedule['session_count'] ?></td>
                             <td>
                                 <span class="status-badge status-<?= $statusKey ?>">
                                     <span class="status-dot"></span>
@@ -115,20 +115,20 @@ include __DIR__ . '/../../includes/header.php';
                             </td>
                             <td>
                                 <div class="d-flex flex-wrap gap-1">
-                                    <a href="schedules/schedule_form.php?id=<?= $event['event_id'] ?>"
+                                    <a href="schedules/schedule_form.php?id=<?= $schedule['schedule_id'] ?>"
                                         class="btn btn-secondary btn-sm">Edit</a>
-                                    <a href="sessions/sessions.php?event_id=<?= $event['event_id'] ?>"
+                                    <a href="sessions/sessions.php?schedule_id=<?= $schedule['schedule_id'] ?>"
                                         class="btn btn-secondary btn-sm">Sessions</a>
 
                                     <?php if ($statusKey === 'live'): ?>
                                         <form method="POST" action="schedules/schedule_status.php">
-                                            <input type="hidden" name="event_id" value="<?= $event['event_id'] ?>">
+                                            <input type="hidden" name="schedule_id" value="<?= $schedule['schedule_id'] ?>">
                                             <input type="hidden" name="status" value="completed">
                                             <button type="submit" class="btn btn-secondary btn-sm">End Schedule</button>
                                         </form>
                                     <?php elseif ($statusKey === 'upcoming'): ?>
                                         <form method="POST" action="schedules/schedule_status.php">
-                                            <input type="hidden" name="event_id" value="<?= $event['event_id'] ?>">
+                                            <input type="hidden" name="schedule_id" value="<?= $schedule['schedule_id'] ?>">
                                             <input type="hidden" name="status" value="live">
                                             <button type="submit" class="btn btn-secondary btn-sm">Force Live</button>
                                         </form>
@@ -169,17 +169,17 @@ include __DIR__ . '/../../includes/header.php';
                 <tbody>
                     <?php foreach ($recentLaps as $lap): ?>
                         <tr>
-                            <td><?= htmlspecialchars($lap['event_name']) ?></td>
+                            <td><?= htmlspecialchars($lap['schedule_name']) ?></td>
                             <td>
-                                <div class="event-details">
-                                    <?php if (!empty($lap['track'])): ?>
-                                        <span class="detail-tag detail-track">
-                                            <?= htmlspecialchars($lap['track']) ?>
+                                <div class="schedule-details">
+                                    <?php if (!empty($lap['event'])): ?>
+                                        <span class="detail-tag detail-event">
+                                            <?= htmlspecialchars($lap['event']) ?>
                                         </span>
                                     <?php endif; ?>
-                                    <?php if (!empty($lap['racer'])): ?>
-                                        <span class="detail-tag detail-racer">
-                                            <?= htmlspecialchars($lap['racer']) ?>
+                                    <?php if (!empty($lap['team'])): ?>
+                                        <span class="detail-tag detail-team">
+                                            <?= htmlspecialchars($lap['team']) ?>
                                         </span>
                                     <?php endif; ?>
                                 </div>

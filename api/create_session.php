@@ -14,14 +14,14 @@ ensureScheduleTimerColumn($conn);
 
 // CREATE SESSION 
 if ($action === 'create') {
-    $eventId = (int) ($data['event_id'] ?? 0);
+    $scheduleId = (int) ($data['schedule_id'] ?? 0);
 
-    if ($eventId === 0) {
-        echo json_encode(['error' => 'event_id is required.']);
+    if ($scheduleId === 0) {
+        echo json_encode(['error' => 'schedule_id is required.']);
         exit();
     }
 
-    // Pull selected options from the event
+    // Pull selected options from the schedule
     $stmt = $conn->prepare('
         SELECT e.team AS car, e.event AS track, e.racer, gv.name AS f1_version, e.timer_minutes
         FROM schedules e
@@ -29,27 +29,27 @@ if ($action === 'create') {
         WHERE e.schedule_id = ?
         LIMIT 1
     ');
-    $stmt->bind_param('i', $eventId);
+    $stmt->bind_param('i', $scheduleId);
     $stmt->execute();
-    $event = $stmt->get_result()->fetch_assoc();
+    $schedule = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    if (!$event) {
-        echo json_encode(['error' => 'Event not found.']);
+    if (!$schedule) {
+        echo json_encode(['error' => 'Schedule not found.']);
         exit();
     }
 
-    $car = $event['car'] ?? '';
-    $track = $event['track'] ?? '';
-    $racer = $event['racer'] ?? '';
-    $f1Version = $event['f1_version'] ?? '';
-    $timerMinutes = $event['timer_minutes'] !== null ? (int) $event['timer_minutes'] : null;
+    $car = $schedule['car'] ?? '';
+    $track = $schedule['track'] ?? '';
+    $racer = $schedule['racer'] ?? '';
+    $f1Version = $schedule['f1_version'] ?? '';
+    $timerMinutes = $schedule['timer_minutes'] !== null ? (int) $schedule['timer_minutes'] : null;
 
     $stmt = $conn->prepare('
         INSERT INTO sessions (schedule_id, participant_name, f1_version, team, event, best_lap_time, timer_minutes)
         VALUES (?, ?, ?, ?, ?, \'\', ?)
     ');
-    $stmt->bind_param('issssi', $eventId, $racer, $f1Version, $car, $track, $timerMinutes);
+    $stmt->bind_param('issssi', $scheduleId, $racer, $f1Version, $car, $track, $timerMinutes);
     $stmt->execute();
     $sessionId = $stmt->insert_id;
     $stmt->close();

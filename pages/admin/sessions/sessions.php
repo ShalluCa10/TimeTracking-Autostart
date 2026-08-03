@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['_action'] ?? '') === 'bulk
     $ids = array_filter(array_map('intval', $_POST['session_ids'] ?? []));
     if (!empty($ids)) {
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $types        = str_repeat('i', count($ids));
+        $types = str_repeat('i', count($ids));
         $stmt = $conn->prepare("DELETE FROM sessions WHERE session_id IN ($placeholders)");
         $stmt->bind_param($types, ...$ids);
         $stmt->execute();
@@ -27,30 +27,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['_action'] ?? '') === 'bulk
 }
 
 // ── Fetch ─────────────────────────────────────────────────────
-$filterEventId = isset($_GET['event_id']) && (int) $_GET['event_id'] > 0
-    ? (int) $_GET['event_id']
+$filterScheduleId = isset($_GET['schedule_id']) && (int) $_GET['schedule_id'] > 0
+    ? (int) $_GET['schedule_id']
     : 0;
 
-$allEvents = $conn->query('
-    SELECT schedule_id AS event_id, schedule_name AS event_name
+$allSchedules = $conn->query('
+    SELECT schedule_id, schedule_name
     FROM   schedules
     ORDER  BY schedule_date DESC
 ')->fetch_all(MYSQLI_ASSOC);
 
-if ($filterEventId > 0) {
+if ($filterScheduleId > 0) {
     $stmt = $conn->prepare('
         SELECT s.session_id,
                s.participant_name,
                s.best_lap_time,
                s.created_at,
-               e.schedule_name AS event_name,
-               e.schedule_id   AS event_id
+               e.schedule_name,
+               e.schedule_id
         FROM   sessions s
         LEFT JOIN schedules e ON e.schedule_id = s.schedule_id
         WHERE  s.schedule_id = ?
         ORDER  BY s.created_at DESC
     ');
-    $stmt->bind_param('i', $filterEventId);
+    $stmt->bind_param('i', $filterScheduleId);
     $stmt->execute();
     $sessions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
@@ -60,8 +60,8 @@ if ($filterEventId > 0) {
                s.participant_name,
                s.best_lap_time,
                s.created_at,
-               e.schedule_name AS event_name,
-               e.schedule_id   AS event_id
+               e.schedule_name,
+               e.schedule_id
         FROM   sessions s
         LEFT JOIN schedules e ON e.schedule_id = s.schedule_id
         ORDER  BY s.created_at DESC
@@ -70,11 +70,11 @@ if ($filterEventId > 0) {
 
 $conn->close();
 
-$activeEventName = 'All Schedules';
-if ($filterEventId > 0) {
-    foreach ($allEvents as $ev) {
-        if ((int) $ev['event_id'] === $filterEventId) {
-            $activeEventName = $ev['event_name'];
+$activeScheduleName = 'All Schedules';
+if ($filterScheduleId > 0) {
+    foreach ($allSchedules as $sc) {
+        if ((int) $sc['schedule_id'] === $filterScheduleId) {
+            $activeScheduleName = $sc['schedule_name'];
             break;
         }
     }
@@ -83,35 +83,37 @@ if ($filterEventId > 0) {
 $pageTitle = 'Sessions';
 include __DIR__ . '/../../../includes/header.php';
 
-function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+function h(string $s): string
+{
+    return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+}
 ?>
 
 <?php if (isset($_SESSION['flash'])): ?>
-    <?php $flash = $_SESSION['flash']; unset($_SESSION['flash']); ?>
+    <?php $flash = $_SESSION['flash'];
+    unset($_SESSION['flash']); ?>
     <div class="alert alert-<?= h($flash['type']) ?> mb-4">
         <?= h($flash['message']) ?>
     </div>
 <?php endif; ?>
 
 <div class="page-header">
-    <h2>Sessions — <?= h($activeEventName) ?></h2>
-    <a href="../schedules/manage_schedules.php" class="btn btn-secondary">← Back to Schedules</a>
+    <h2>Sessions — <?= h($activeScheduleName) ?></h2>
 </div>
 
 <!-- Filter Bar -->
 <form method="GET" class="d-flex align-items-center gap-2 mb-4">
-    <label for="event_id" class="form-label mb-0">Filter by Schedule</label>
-    <select name="event_id" id="event_id" class="form-select w-auto">
+    <label for="schedule_id" class="form-label mb-0">Filter by Schedule</label>
+    <select name="schedule_id" id="schedule_id" class="form-select w-auto">
         <option value="0">All Schedules</option>
-        <?php foreach ($allEvents as $ev): ?>
-            <option value="<?= (int) $ev['event_id'] ?>"
-                <?= (int) $ev['event_id'] === $filterEventId ? 'selected' : '' ?>>
-                <?= h($ev['event_name']) ?>
+        <?php foreach ($allSchedules as $sc): ?>
+            <option value="<?= (int) $sc['schedule_id'] ?>" <?= (int) $sc['schedule_id'] === $filterScheduleId ? 'selected' : '' ?>>
+                <?= h($sc['schedule_name']) ?>
             </option>
         <?php endforeach; ?>
     </select>
     <button type="submit" class="btn btn-primary">Apply</button>
-    <?php if ($filterEventId > 0): ?>
+    <?php if ($filterScheduleId > 0): ?>
         <a href="sessions.php" class="btn btn-secondary">Clear</a>
     <?php endif; ?>
 </form>
@@ -123,15 +125,15 @@ function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8')
     <?php else: ?>
 
         <form method="POST" id="bulkForm">
-            <input type="hidden" name="_action"  value="bulk_delete">
-            <input type="hidden" name="redirect" value="sessions.php?event_id=<?= $filterEventId ?>">
+            <input type="hidden" name="_action" value="bulk_delete">
+            <input type="hidden" name="redirect" value="sessions.php?schedule_id=<?= $filterScheduleId ?>">
 
             <!-- Bulk toolbar -->
             <div class="bulk-toolbar d-flex align-items-center gap-2 px-3 py-2 border-bottom" id="bulkToolbar">
                 <span id="bulkCount" class="flex-grow-1 text-muted small text-uppercase">0 selected</span>
                 <button type="button" class="btn btn-secondary btn-sm" id="btnSelectAll">Select All</button>
-                <button type="submit" class="btn btn-danger btn-sm"
-                        onclick="return confirmBulkDelete()">Delete Selected</button>
+                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirmBulkDelete()">Delete
+                    Selected</button>
             </div>
 
             <div class="table-responsive">
@@ -150,28 +152,23 @@ function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8')
                         <?php foreach ($sessions as $s): ?>
                             <tr>
                                 <td>
-                                    <input type="checkbox"
-                                           name="session_ids[]"
-                                           value="<?= (int) $s['session_id'] ?>"
-                                           class="row-check session-check">
+                                    <input type="checkbox" name="session_ids[]" value="<?= (int) $s['session_id'] ?>"
+                                        class="row-check session-check">
                                 </td>
                                 <td>
-                                    <a href="sessions.php?event_id=<?= (int) $s['event_id'] ?>"
-                                       class="table-link">
-                                        <?= h($s['event_name'] ?? '—') ?>
+                                    <a href="sessions.php?schedule_id=<?= (int) $s['schedule_id'] ?>" class="table-link">
+                                        <?= h($s['schedule_name'] ?? '—') ?>
                                     </a>
                                 </td>
                                 <td><?= h($s['participant_name'] ?? '—') ?></td>
                                 <td><strong><?= $s['best_lap_time'] !== '' ? h($s['best_lap_time']) : '—' ?></strong></td>
                                 <td><?= $s['created_at'] ? date('M j, Y', strtotime($s['created_at'])) : '—' ?></td>
                                 <td>
-                                    <form method="POST" action="session_delete.php"
-                                          onsubmit="return confirm('Delete this session?')">
-                                        <input type="hidden" name="session_id" value="<?= (int) $s['session_id'] ?>">
-                                        <input type="hidden" name="redirect"
-                                               value="sessions.php?event_id=<?= $filterEventId ?>">
-                                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                                    </form>
+                                    <a href="session_form.php?id=<?= (int) $s['session_id'] ?>&schedule_id=<?= (int) $s['schedule_id'] ?>"
+                                        class="btn btn-secondary btn-sm">Edit</a>
+                                    <button type="submit" form="delete-session-<?= (int) $s['session_id'] ?>"
+                                        class="btn btn-danger btn-sm"
+                                        onclick="return confirm('Delete this session?')">Delete</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -180,62 +177,69 @@ function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8')
             </div>
         </form>
 
+        <?php foreach ($sessions as $s): ?>
+            <form id="delete-session-<?= (int) $s['session_id'] ?>" method="POST" action="session_delete.php" style="display:none;">
+                <input type="hidden" name="session_id" value="<?= (int) $s['session_id'] ?>">
+                <input type="hidden" name="redirect" value="sessions.php?schedule_id=<?= $filterScheduleId ?>">
+            </form>
+        <?php endforeach; ?>
+
     <?php endif; ?>
 </div>
 
 <script>
-(function () {
-    const checkAll   = document.getElementById('checkAll');
-    const toolbar    = document.getElementById('bulkToolbar');
-    const countLabel = document.getElementById('bulkCount');
-    const btnAll     = document.getElementById('btnSelectAll');
-    const checks     = () => [...document.querySelectorAll('.session-check')];
+    (function () {
+        const checkAll = document.getElementById('checkAll');
+        const toolbar = document.getElementById('bulkToolbar');
+        const countLabel = document.getElementById('bulkCount');
+        const btnAll = document.getElementById('btnSelectAll');
+        const checks = () => [...document.querySelectorAll('.session-check')];
 
-    function updateToolbar() {
-        const selected = checks().filter(c => c.checked);
-        const count    = selected.length;
-        const total    = checks().length;
+        function updateToolbar() {
+            const selected = checks().filter(c => c.checked);
+            const count = selected.length;
+            const total = checks().length;
 
-        countLabel.textContent = count === 0
-            ? '0 selected'
-            : `${count} of ${total} selected`;
+            countLabel.textContent = count === 0
+                ? '0 selected'
+                : `${count} of ${total} selected`;
 
-        toolbar.classList.toggle('has-selection', count > 0);
-        countLabel.classList.toggle('text-muted', count === 0);
-        countLabel.classList.toggle('text-white',  count > 0);
+            toolbar.classList.toggle('has-selection', count > 0);
+            countLabel.classList.toggle('text-muted', count === 0);
+            countLabel.classList.toggle('text-white', count > 0);
 
-        checkAll.checked       = count === total && total > 0;
-        checkAll.indeterminate = count > 0 && count < total;
-        btnAll.textContent     = count === total ? 'Deselect All' : 'Select All';
+            checkAll.checked = count === total && total > 0;
+            checkAll.indeterminate = count > 0 && count < total;
+            btnAll.textContent = count === total ? 'Deselect All' : 'Select All';
 
-        checks().forEach(c => {
-            c.closest('tr').classList.toggle('row-dimmed', count > 0 && !c.checked);
+            checks().forEach(c => {
+                c.closest('tr').classList.toggle('row-dimmed', count > 0 && !c.checked);
+            });
+        }
+
+        checkAll.addEventListener('change', () => {
+            checks().forEach(c => c.checked = checkAll.checked);
+            updateToolbar();
         });
+
+        btnAll.addEventListener('click', () => {
+            const allChecked = checks().every(c => c.checked);
+            checks().forEach(c => c.checked = !allChecked);
+            updateToolbar();
+        });
+
+        document.querySelectorAll('.session-check').forEach(c => {
+            c.addEventListener('change', updateToolbar);
+        });
+
+        updateToolbar();
+    })();
+
+    function confirmBulkDelete() {
+        const count = document.querySelectorAll('.session-check:checked').length;
+        if (count === 0) { alert('No sessions selected.'); return false; }
+        return confirm(`Delete ${count} session(s)? This cannot be undone.`);
     }
-
-    checkAll.addEventListener('change', () => {
-        checks().forEach(c => c.checked = checkAll.checked);
-        updateToolbar();
-    });
-
-    btnAll.addEventListener('click', () => {
-        const allChecked = checks().every(c => c.checked);
-        checks().forEach(c => c.checked = !allChecked);
-        updateToolbar();
-    });
-
-    document.querySelectorAll('.session-check').forEach(c => {
-        c.addEventListener('change', updateToolbar);
-    });
-
-    updateToolbar();
-})();
-
-function confirmBulkDelete() {
-    const count = document.querySelectorAll('.session-check:checked').length;
-    if (count === 0) { alert('No sessions selected.'); return false; }
-    return confirm(`Delete ${count} session(s)? This cannot be undone.`);
-}
 </script>
 
 <?php include __DIR__ . '/../../../includes/footer.php'; ?>

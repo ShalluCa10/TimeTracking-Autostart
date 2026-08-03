@@ -26,9 +26,9 @@ function getFlash(): ?array
     return $flash;
 }
 
-// ── Event Status ──────────────────────────────────────────────────────────────
+// ── Schedule Status ────────────────────────────────────────────────────────────
 
-function resolveEventStatus(string $dbStatus, string $eventDate): array
+function resolveScheduleStatus(string $dbStatus, string $scheduleDate): array
 {
     if ($dbStatus === 'live')
         return ['live', 'Live', 'badge--live'];
@@ -38,7 +38,7 @@ function resolveEventStatus(string $dbStatus, string $eventDate): array
     // "auto" only turns Live/Completed when an admin explicitly sets it; a same-day
     // schedule stays Upcoming until then, it only auto-completes once its date has passed.
     $today = date('Y-m-d');
-    if ($eventDate < $today)
+    if ($scheduleDate < $today)
         return ['completed', 'Completed', 'badge--completed'];
     return ['upcoming', 'Upcoming', 'badge--upcoming'];
 }

@@ -8,12 +8,12 @@ requireLogin();
 
 $conn = getConnection();
 ensureScheduleTimerColumn($conn);
-$eventId = (int) ($_GET['id'] ?? 0);
-$isEdit = $eventId > 0;
+$scheduleId = (int) ($_GET['id'] ?? 0);
+$isEdit = $scheduleId > 0;
 $errors = [];
 $values = [
-    'event_name' => '',
-    'event_date' => date('Y-m-d'),
+    'schedule_name' => '',
+    'schedule_date' => date('Y-m-d'),
     'location' => '',
     'notes' => '',
     'version_id' => 0,
@@ -29,20 +29,20 @@ $versions = $conn->query('SELECT id, name FROM game_versions ORDER BY name ASC')
 
 if ($isEdit) {
     $stmt = $conn->prepare('
-        SELECT schedule_id AS event_id, schedule_name AS event_name, schedule_date AS event_date,
+        SELECT schedule_id, schedule_name, schedule_date,
                location, version_id, team AS car, event AS track, racer, notes, created_at, status, timer_minutes
         FROM schedules WHERE schedule_id = ? LIMIT 1
     ');
-    $stmt->bind_param('i', $eventId);
+    $stmt->bind_param('i', $scheduleId);
     $stmt->execute();
-    $event = $stmt->get_result()->fetch_assoc();
+    $schedule = $stmt->get_result()->fetch_assoc();
     $stmt->close();
-    if (!$event) {
+    if (!$schedule) {
         $conn->close();
         header('Location: ../dashboard.php');
         exit();
     }
-    $values = array_merge($values, $event);
+    $values = array_merge($values, $schedule);
 }
 
 $cars = [];
@@ -65,8 +65,8 @@ if ($selectedVersion > 0) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $values['event_name'] = trim($_POST['event_name'] ?? '');
-    $values['event_date'] = trim($_POST['event_date'] ?? '');
+    $values['schedule_name'] = trim($_POST['schedule_name'] ?? '');
+    $values['schedule_date'] = trim($_POST['schedule_date'] ?? '');
     $values['location'] = trim($_POST['location'] ?? '');
     $values['notes'] = trim($_POST['notes'] ?? '');
     $values['version_id'] = (int) ($_POST['version_id'] ?? 0);
@@ -75,9 +75,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $values['racer'] = trim($_POST['racer'] ?? '');
     $values['status'] = trim($_POST['status'] ?? 'auto');
     $values['timer_minutes'] = trim($_POST['timer_minutes'] ?? '');
-    if ($values['event_name'] === '')
-        $errors[] = 'Event name is required.';
-    if ($values['event_date'] === '')
+    if ($values['schedule_name'] === '')
+        $errors[] = 'Schedule name is required.';
+    if ($values['schedule_date'] === '')
         $errors[] = 'Date is required.';
     if ($values['version_id'] === 0)
         $errors[] = 'Please select a game version.';
@@ -98,8 +98,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ');
             $stmt->bind_param(
                 'ssssissssii',
-                $values['event_name'],
-                $values['event_date'],
+                $values['schedule_name'],
+                $values['schedule_date'],
                 $values['location'],
                 $values['notes'],
                 $values['version_id'],
@@ -108,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $values['racer'],
                 $values['status'],
                 $timerMinutesParam,
-                $eventId
+                $scheduleId
             );
         } else {
             $stmt = $conn->prepare('
@@ -117,8 +117,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ');
             $stmt->bind_param(
                 'ssssissssi',
-                $values['event_name'],
-                $values['event_date'],
+                $values['schedule_name'],
+                $values['schedule_date'],
                 $values['location'],
                 $values['notes'],
                 $values['version_id'],
@@ -132,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute();
         $stmt->close();
         $conn->close();
-        $_SESSION['flash'] = ['type' => 'success', 'message' => $isEdit ? 'Event updated.' : 'Event created.'];
+        $_SESSION['flash'] = ['type' => 'success', 'message' => $isEdit ? 'Schedule updated.' : 'Schedule created.'];
         header('Location: ../dashboard.php');
         exit();
     }
@@ -140,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $conn->close();
 
-$pageTitle = $isEdit ? 'Edit Event' : 'New Event';
+$pageTitle = $isEdit ? 'Edit Schedule' : 'New Schedule';
 include __DIR__ . '/../../../includes/header.php';
 
 function h(string $s): string
@@ -193,16 +193,16 @@ function emptyClass(bool $condition): string
                 <form method="POST">
                     <div class="row g-3 mb-3">
                         <div class="col-md-8">
-                            <label for="event_name" class="form-label">Event Name <span
+                            <label for="schedule_name" class="form-label">Schedule Name <span
                                     class="text-danger">*</span></label>
-                            <input type="text" id="event_name" name="event_name" class="form-control"
-                                value="<?= h($values['event_name']) ?>" required autofocus
+                            <input type="text" id="schedule_name" name="schedule_name" class="form-control"
+                                value="<?= h($values['schedule_name']) ?>" required autofocus
                                 placeholder="e.g. Monaco GP Night">
                         </div>
                         <div class="col-md-4">
-                            <label for="event_date" class="form-label">Date <span class="text-danger">*</span></label>
-                            <input type="date" id="event_date" name="event_date" class="form-control"
-                                value="<?= h($values['event_date']) ?>" required>
+                            <label for="schedule_date" class="form-label">Date <span class="text-danger">*</span></label>
+                            <input type="date" id="schedule_date" name="schedule_date" class="form-control"
+                                value="<?= h($values['schedule_date']) ?>" required>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -264,7 +264,7 @@ function emptyClass(bool $condition): string
                             value="<?= h($values['racer']) ?>" placeholder="e.g. Oscar Piastri">
                     </div>
                     <div class="mb-1 mt-4">
-                        <span class="form-section__label">Event Status</span>
+                        <span class="form-section__label">Schedule Status</span>
                     </div>
                     <div class="mb-3">
                         <label for="sel-status" class="form-label">Status <span class="text-danger">*</span></label>
@@ -278,7 +278,7 @@ function emptyClass(bool $condition): string
                         <label for="timer_minutes" class="form-label">Session Timer (minutes)</label>
                         <input type="number" id="timer_minutes" name="timer_minutes" class="form-control" min="1"
                             value="<?= h((string) $values['timer_minutes']) ?>" placeholder="Leave blank for no timer">
-                        <div class="form-text">Each session created for this event auto-ends once this time runs out.</div>
+                        <div class="form-text">Each session created for this schedule auto-ends once this time runs out.</div>
                     </div>
                     <div class="mb-4">
                         <label for="notes" class="form-label">Notes</label>
@@ -287,7 +287,7 @@ function emptyClass(bool $condition): string
                     </div>
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
-                            <?= $isEdit ? 'Save Event' : 'Create Event' ?>
+                            <?= $isEdit ? 'Save Schedule' : 'Create Schedule' ?>
                         </button>
                     </div>
                 </form>

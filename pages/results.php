@@ -12,7 +12,7 @@ $conn = getConnection();
 
 // Get session info
 $sessionStmt = $conn->prepare("
-    SELECT s.*, sc.schedule_name AS event_name
+    SELECT s.*, sc.schedule_name
     FROM sessions s
     LEFT JOIN schedules sc ON sc.schedule_id = s.schedule_id
     WHERE s.session_id = ?
@@ -53,7 +53,7 @@ if (!empty($laps)) {
         <div class="results-header">
             <h1>🏁 Session Results</h1>
             <p class="session-label">Session #<?= $session_id ?> &mdash;
-                <?= $session ? htmlspecialchars($session['event_name'] ?? 'Unknown Schedule') : 'Unknown Schedule' ?>
+                <?= $session ? htmlspecialchars($session['schedule_name'] ?? 'Unknown Schedule') : 'Unknown Schedule' ?>
             </p>
         </div>
 

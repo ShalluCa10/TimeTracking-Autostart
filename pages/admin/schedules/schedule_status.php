@@ -8,7 +8,7 @@ require_once __DIR__ . '/../../../includes/helpers.php';
 
 requireLogin();
 
-$id = (int) ($_POST['event_id'] ?? 0);
+$id = (int) ($_POST['schedule_id'] ?? 0);
 $status = $_POST['status'] ?? '';
 $redirect = $_POST['redirect'] ?? '../dashboard.php';
 

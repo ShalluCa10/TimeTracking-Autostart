@@ -11,16 +11,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
-$eventId = (int) ($_POST['event_id'] ?? 0);
+$scheduleId = (int) ($_POST['schedule_id'] ?? 0);
 
-if ($eventId === 0) {
+if ($scheduleId === 0) {
     header('Location: ../dashboard.php');
     exit();
 }
 
 $conn = getConnection();
 $stmt = $conn->prepare('DELETE FROM schedules WHERE schedule_id = ?');
-$stmt->bind_param('i', $eventId);
+$stmt->bind_param('i', $scheduleId);
 $stmt->execute();
 $stmt->close();
 $conn->close();

@@ -2,17 +2,17 @@
 require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/config/db.php';
 
-$event_id = (int) ($_GET['event_id'] ?? 0);
+$schedule_id = (int) ($_GET['schedule_id'] ?? 0);
 
 $conn = getConnection();
 
-// Events for filter dropdown
-$events = $conn->query("SELECT schedule_id AS event_id, schedule_name AS event_name FROM schedules ORDER BY schedule_date DESC")->fetch_all(MYSQLI_ASSOC);
+// Schedules for filter dropdown
+$schedules = $conn->query("SELECT schedule_id, schedule_name FROM schedules ORDER BY schedule_date DESC")->fetch_all(MYSQLI_ASSOC);
 
-// Prepare main query: get each session's best lap, optionally filtered by event
-if ($event_id > 0) {
+// Prepare main query: get each session's best lap, optionally filtered by schedule
+if ($schedule_id > 0) {
     $stmt = $conn->prepare(
-        "SELECT l.id, l.session_id, l.lap_number, l.lap_time_ms, l.lap_time, s.participant_name, s.schedule_id AS event_id
+        "SELECT l.id, l.session_id, l.lap_number, l.lap_time_ms, l.lap_time, s.participant_name, s.schedule_id
          FROM laps l
          JOIN sessions s ON s.session_id = l.session_id
          WHERE l.lap_time_ms = (
@@ -21,13 +21,13 @@ if ($event_id > 0) {
          AND s.schedule_id = ?
          ORDER BY l.lap_time_ms ASC"
     );
-    $stmt->bind_param('i', $event_id);
+    $stmt->bind_param('i', $schedule_id);
     $stmt->execute();
     $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 } else {
     $rows = $conn->query(
-        "SELECT l.id, l.session_id, l.lap_number, l.lap_time_ms, l.lap_time, s.participant_name, s.schedule_id AS event_id
+        "SELECT l.id, l.session_id, l.lap_number, l.lap_time_ms, l.lap_time, s.participant_name, s.schedule_id
          FROM laps l
          JOIN sessions s ON s.session_id = l.session_id
          WHERE l.lap_time_ms = (
@@ -105,15 +105,15 @@ $conn->close();
     <div class="results-container leaderboard-container">
         <div class="results-header">
             <h1>Leaderboard</h1>
-            <p class="session-label">Best lap across sessions<?= $event_id ? ' — filtered by event' : '' ?></p>
+            <p class="session-label">Best lap across sessions<?= $schedule_id ? ' — filtered by schedule' : '' ?></p>
         </div>
 
         <div class="filter-row">
             <form method="GET">
-                <select name="event_id" onchange="this.form.submit()">
-                    <option value="">All Events</option>
-                    <?php foreach ($events as $ev): ?>
-                        <option value="<?= $ev['event_id'] ?>" <?= $event_id == $ev['event_id'] ? 'selected' : '' ?>><?= htmlspecialchars($ev['event_name']) ?></option>
+                <select name="schedule_id" onchange="this.form.submit()">
+                    <option value="">All Schedules</option>
+                    <?php foreach ($schedules as $sc): ?>
+                        <option value="<?= $sc['schedule_id'] ?>" <?= $schedule_id == $sc['schedule_id'] ? 'selected' : '' ?>><?= htmlspecialchars($sc['schedule_name']) ?></option>
                     <?php endforeach; ?>
                 </select>
                 <noscript><button type="submit" class="btn-back">Filter</button></noscript>

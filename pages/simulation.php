@@ -8,10 +8,10 @@ require_once __DIR__ . '/../includes/helpers.php';
 $conn = getConnection();
 ensureScheduleTimerColumn($conn);
 $sessionId = (int) ($_GET['session_id'] ?? 0);
-$eventId = (int) ($_GET['event_id'] ?? 0);
+$scheduleId = (int) ($_GET['schedule_id'] ?? 0);
 
-$events = $conn->query("
-    SELECT schedule_id AS event_id, schedule_name AS event_name, team AS car, event AS track, racer
+$schedules = $conn->query("
+    SELECT schedule_id, schedule_name, team AS car, event AS track, racer
     FROM   schedules
     WHERE  status = 'live'
     ORDER  BY schedule_date DESC
@@ -39,14 +39,14 @@ include __DIR__ . '/../includes/public_header.php';
 
     <h1 class="sim-title">F1 LAP SIMULATOR</h1>
     <p class="sim-subtitle" id="simSubtitle">
-        Session #<?= $sessionId ?> &nbsp;|&nbsp; Schedule #<?= $eventId ?>
+        Session #<?= $sessionId ?> &nbsp;|&nbsp; Schedule #<?= $scheduleId ?>
     </p>
 
-    <!-- ── EVENT SELECTOR ── -->
+    <!-- ── SCHEDULE SELECTOR ── -->
     <?php if ($sessionId === 0): ?>
-        <div id="event-selector" style="margin-bottom: 40px;">
+        <div id="schedule-selector" style="margin-bottom: 40px;">
 
-            <?php if (empty($events)): ?>
+            <?php if (empty($schedules)): ?>
                 <p class="sim-empty">
                     No live schedules available.
                     <a href="/pages/admin/schedules/manage_schedules.php">Go live on a schedule first.</a>
@@ -54,22 +54,22 @@ include __DIR__ . '/../includes/public_header.php';
             <?php else: ?>
 
                 <div class="sim-pre__group">
-                    <label for="sel-event">SELECT SCHEDULE</label>
-                    <select id="sel-event">
+                    <label for="sel-schedule">SELECT SCHEDULE</label>
+                    <select id="sel-schedule">
                         <option value="">— Select Schedule —</option>
-                        <?php foreach ($events as $ev): ?>
-                            <option value="<?= $ev['event_id'] ?>" data-car="<?= htmlspecialchars($ev['car'] ?? '') ?>"
-                                data-track="<?= htmlspecialchars($ev['track'] ?? '') ?>"
-                                data-racer="<?= htmlspecialchars($ev['racer'] ?? '') ?>"
-                                data-name="<?= htmlspecialchars($ev['event_name']) ?>">
-                                <?= htmlspecialchars($ev['event_name']) ?>
+                        <?php foreach ($schedules as $sc): ?>
+                            <option value="<?= $sc['schedule_id'] ?>" data-car="<?= htmlspecialchars($sc['car'] ?? '') ?>"
+                                data-track="<?= htmlspecialchars($sc['track'] ?? '') ?>"
+                                data-racer="<?= htmlspecialchars($sc['racer'] ?? '') ?>"
+                                data-name="<?= htmlspecialchars($sc['schedule_name']) ?>">
+                                <?= htmlspecialchars($sc['schedule_name']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
 
-                <!-- Event preview -->
-                <div id="event-preview" class="sim-pre__preview" style="display:none;">
+                <!-- Schedule preview -->
+                <div id="schedule-preview" class="sim-pre__preview" style="display:none;">
                     <div class="sim-pre__detail"><span>Team</span> <strong id="prev-car">—</strong></div>
                     <div class="sim-pre__detail"><span>Event</span> <strong id="prev-track">—</strong></div>
                     <div class="sim-pre__detail"><span>Participant</span> <strong id="prev-racer">—</strong></div>
@@ -144,10 +144,10 @@ include __DIR__ . '/../includes/public_header.php';
 
 <script>
     (function () {
-        const sel = document.getElementById('sel-event');
+        const sel = document.getElementById('sel-schedule');
         const btn = document.getElementById('startBtn');
         const status = document.getElementById('selector-status');
-        const preview = document.getElementById('event-preview');
+        const preview = document.getElementById('schedule-preview');
         const prevCar = document.getElementById('prev-car');
         const prevTrack = document.getElementById('prev-track');
         const prevRacer = document.getElementById('prev-racer');
@@ -177,7 +177,7 @@ include __DIR__ . '/../includes/public_header.php';
                 const res = await fetch('/api/create_session.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ event_id: parseInt(this.value) }),
+                    body: JSON.stringify({ schedule_id: parseInt(this.value) }),
                 });
                 const data = await res.json();
 
