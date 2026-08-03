@@ -180,7 +180,7 @@ include __DIR__ . '/../../../includes/header.php';
 
 <?php if ($activeVersionId > 0): ?>
 
-    <div class="row g-4">
+    <div class="row g-4 justify-content-center">
 
         <?php
         $panels = [
@@ -190,7 +190,7 @@ include __DIR__ . '/../../../includes/header.php';
         ?>
 
         <?php foreach ($panels as $panel): ?>
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-6 col-xl-5">
                 <div class="card h-100">
 
                     <div class="card-header">
@@ -281,6 +281,34 @@ include __DIR__ . '/../../../includes/header.php';
         list-style: none;
         padding: 16px;
         margin: 0;
+        max-height: 620px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(225, 6, 0, 0.55) rgba(255, 255, 255, 0.06);
+    }
+
+    .item-grid::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .item-grid::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 999px;
+    }
+
+    .item-grid::-webkit-scrollbar-thumb {
+        background: rgba(225, 6, 0, 0.55);
+        border-radius: 999px;
+    }
+
+    .item-grid::-webkit-scrollbar-thumb:hover {
+        background: rgba(225, 6, 0, 0.8);
+    }
+
+    /* Events list grows to fit its content instead of scrolling */
+    #list-tracks {
+        max-height: none;
+        overflow-y: visible;
     }
 
     /* ── Card ── */
@@ -486,6 +514,7 @@ include __DIR__ . '/../../../includes/header.php';
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 12px;
             padding: 12px;
+            max-height: 480px;
         }
     }
 </style>

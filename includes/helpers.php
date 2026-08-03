@@ -35,12 +35,12 @@ function resolveEventStatus(string $dbStatus, string $eventDate): array
     if ($dbStatus === 'completed')
         return ['completed', 'Completed', 'badge--completed'];
 
+    // "auto" only turns Live/Completed when an admin explicitly sets it; a same-day
+    // schedule stays Upcoming until then, it only auto-completes once its date has passed.
     $today = date('Y-m-d');
-    if ($eventDate > $today)
-        return ['upcoming', 'Upcoming', 'badge--upcoming'];
-    if ($eventDate === $today)
-        return ['live', 'Live', 'badge--live'];
-    return ['completed', 'Completed', 'badge--completed'];
+    if ($eventDate < $today)
+        return ['completed', 'Completed', 'badge--completed'];
+    return ['upcoming', 'Upcoming', 'badge--upcoming'];
 }
 
 // ── DB Table Bootstrap ────────────────────────────────────────────────────────
@@ -96,5 +96,22 @@ function ensureGameTables($conn)
 
     if ($tableExists('game_tracks') && !$conn->query('SELECT 1 FROM game_events LIMIT 1')->num_rows) {
         $conn->query('INSERT INTO game_events (id, version_id, name, image, sort_order) SELECT id, version_id, name, image, sort_order FROM game_tracks');
+    }
+}
+
+// ── Session Timer Column Bootstrap ───────────────────────────────────────────
+
+function ensureScheduleTimerColumn($conn)
+{
+    $columnExists = function (string $table, string $column) use ($conn): bool {
+        $result = $conn->query("SHOW COLUMNS FROM `$table` LIKE '" . $conn->real_escape_string($column) . "'");
+        return $result && $result->num_rows > 0;
+    };
+
+    if (!$columnExists('schedules', 'timer_minutes')) {
+        $conn->query('ALTER TABLE `schedules` ADD COLUMN `timer_minutes` INT DEFAULT NULL AFTER `status`');
+    }
+    if (!$columnExists('sessions', 'timer_minutes')) {
+        $conn->query('ALTER TABLE `sessions` ADD COLUMN `timer_minutes` INT DEFAULT NULL AFTER `best_lap_time`');
     }
 }

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/helpers.php';
 header('Content-Type: application/json');
 // Public API: do not require admin login for creating sessions or saving laps
 
@@ -9,6 +10,7 @@ $data = json_decode($raw, true);
 $action = $data['action'] ?? 'create';
 
 $conn = getConnection();
+ensureScheduleTimerColumn($conn);
 
 // CREATE SESSION 
 if ($action === 'create') {
@@ -21,7 +23,7 @@ if ($action === 'create') {
 
     // Pull selected options from the event
     $stmt = $conn->prepare('
-        SELECT e.team AS car, e.event AS track, e.racer, gv.name AS f1_version
+        SELECT e.team AS car, e.event AS track, e.racer, gv.name AS f1_version, e.timer_minutes
         FROM schedules e
         LEFT JOIN game_versions gv ON gv.id = e.version_id
         WHERE e.schedule_id = ?
@@ -41,18 +43,19 @@ if ($action === 'create') {
     $track = $event['track'] ?? '';
     $racer = $event['racer'] ?? '';
     $f1Version = $event['f1_version'] ?? '';
+    $timerMinutes = $event['timer_minutes'] !== null ? (int) $event['timer_minutes'] : null;
 
     $stmt = $conn->prepare('
-        INSERT INTO sessions (schedule_id, participant_name, f1_version, team, event, best_lap_time)
-        VALUES (?, ?, ?, ?, ?, \'\')
+        INSERT INTO sessions (schedule_id, participant_name, f1_version, team, event, best_lap_time, timer_minutes)
+        VALUES (?, ?, ?, ?, ?, \'\', ?)
     ');
-    $stmt->bind_param('issss', $eventId, $racer, $f1Version, $car, $track);
+    $stmt->bind_param('issssi', $eventId, $racer, $f1Version, $car, $track, $timerMinutes);
     $stmt->execute();
     $sessionId = $stmt->insert_id;
     $stmt->close();
     $conn->close();
 
-    echo json_encode(['session_id' => $sessionId]);
+    echo json_encode(['session_id' => $sessionId, 'timer_minutes' => $timerMinutes]);
     exit();
 }
 

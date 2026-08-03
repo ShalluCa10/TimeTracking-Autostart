@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../../includes/helpers.php';
 requireLogin();
 
 $conn = getConnection();
+ensureScheduleTimerColumn($conn);
 $eventId = (int) ($_GET['id'] ?? 0);
 $isEdit = $eventId > 0;
 $errors = [];
@@ -20,6 +21,7 @@ $values = [
     'track' => '',
     'racer' => '',
     'status' => 'auto',
+    'timer_minutes' => '',
 ];
 
 $versions = $conn->query('SELECT id, name FROM game_versions ORDER BY name ASC')
@@ -28,7 +30,7 @@ $versions = $conn->query('SELECT id, name FROM game_versions ORDER BY name ASC')
 if ($isEdit) {
     $stmt = $conn->prepare('
         SELECT schedule_id AS event_id, schedule_name AS event_name, schedule_date AS event_date,
-               location, version_id, team AS car, event AS track, racer, notes, created_at, status
+               location, version_id, team AS car, event AS track, racer, notes, created_at, status, timer_minutes
         FROM schedules WHERE schedule_id = ? LIMIT 1
     ');
     $stmt->bind_param('i', $eventId);
@@ -72,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $values['track'] = trim($_POST['track'] ?? '');
     $values['racer'] = trim($_POST['racer'] ?? '');
     $values['status'] = trim($_POST['status'] ?? 'auto');
+    $values['timer_minutes'] = trim($_POST['timer_minutes'] ?? '');
     if ($values['event_name'] === '')
         $errors[] = 'Event name is required.';
     if ($values['event_date'] === '')
@@ -81,14 +84,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $allowed = ['auto', 'live', 'completed'];
     if (!in_array($values['status'], $allowed))
         $errors[] = 'Invalid status selected.';
+    if ($values['timer_minutes'] !== '' && (!ctype_digit($values['timer_minutes']) || (int) $values['timer_minutes'] < 1))
+        $errors[] = 'Session timer must be a whole number of minutes (1 or more).';
     if (empty($errors)) {
+        $timerMinutesParam = $values['timer_minutes'] === '' ? null : (int) $values['timer_minutes'];
         if ($isEdit) {
             $stmt = $conn->prepare('
                 UPDATE schedules
                 SET schedule_name = ?, schedule_date = ?, location = ?,
                     notes = ?, version_id = ?, team = ?, event = ?, racer = ?,
-                    status = ?
+                    status = ?, timer_minutes = ?
                 WHERE schedule_id = ?
+            ');
+            $stmt->bind_param(
+                'ssssissssii',
+                $values['event_name'],
+                $values['event_date'],
+                $values['location'],
+                $values['notes'],
+                $values['version_id'],
+                $values['car'],
+                $values['track'],
+                $values['racer'],
+                $values['status'],
+                $timerMinutesParam,
+                $eventId
+            );
+        } else {
+            $stmt = $conn->prepare('
+                INSERT INTO schedules (schedule_name, schedule_date, location, notes, version_id, team, event, racer, status, timer_minutes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ');
             $stmt->bind_param(
                 'ssssissssi',
@@ -101,24 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $values['track'],
                 $values['racer'],
                 $values['status'],
-                $eventId
-            );
-        } else {
-            $stmt = $conn->prepare('
-                INSERT INTO schedules (schedule_name, schedule_date, location, notes, version_id, team, event, racer, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ');
-            $stmt->bind_param(
-                'ssssissss',
-                $values['event_name'],
-                $values['event_date'],
-                $values['location'],
-                $values['notes'],
-                $values['version_id'],
-                $values['car'],
-                $values['track'],
-                $values['racer'],
-                $values['status']
+                $timerMinutesParam
             );
         }
         $stmt->execute();
@@ -266,6 +274,12 @@ function emptyClass(bool $condition): string
                             <option value="completed" <?= sel($values['status'], 'completed') ?>>Completed</option>
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label for="timer_minutes" class="form-label">Session Timer (minutes)</label>
+                        <input type="number" id="timer_minutes" name="timer_minutes" class="form-control" min="1"
+                            value="<?= h((string) $values['timer_minutes']) ?>" placeholder="Leave blank for no timer">
+                        <div class="form-text">Each session created for this event auto-ends once this time runs out.</div>
+                    </div>
                     <div class="mb-4">
                         <label for="notes" class="form-label">Notes</label>
                         <textarea id="notes" name="notes" class="form-control" rows="3"
@@ -291,9 +305,7 @@ function emptyClass(bool $condition): string
         const savedTrack = <?= json_encode($values['track']) ?>;
         const savedCar = <?= json_encode($values['car']) ?>;
         const savedRacer = <?= json_encode($values['racer']) ?>;
-        const API_URL = window.location.origin
-            + window.location.pathname.replace(/\/pages\/[^\/]+$/, '')
-            + '/api/get_options.php';
+        const API_URL = '/api/get_options.php';
 
         function resetSelect(el, placeholder) {
             el.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;

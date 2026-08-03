@@ -6,6 +6,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 
 $conn = getConnection();
+ensureScheduleTimerColumn($conn);
 $sessionId = (int) ($_GET['session_id'] ?? 0);
 $eventId = (int) ($_GET['event_id'] ?? 0);
 
@@ -15,6 +16,16 @@ $events = $conn->query("
     WHERE  status = 'live'
     ORDER  BY schedule_date DESC
 ")->fetch_all(MYSQLI_ASSOC);
+
+$sessionTimerMinutes = null;
+if ($sessionId > 0) {
+    $stmt = $conn->prepare('SELECT timer_minutes FROM sessions WHERE session_id = ? LIMIT 1');
+    $stmt->bind_param('i', $sessionId);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    $sessionTimerMinutes = $row['timer_minutes'] ?? null;
+}
 
 $conn->close();
 
@@ -82,7 +93,8 @@ include __DIR__ . '/../includes/public_header.php';
     </div>
 
     <!-- ── Timer ── -->
-    <div class="timer-display" id="timerDisplay">00:00</div>
+    <div class="timer-display" id="timerDisplay"
+        data-timer-minutes="<?= $sessionTimerMinutes !== null ? (int) $sessionTimerMinutes : '' ?>">00:00</div>
     <div class="lap-counter" id="lapCounter">LAP 0</div>
 
     <!-- ── Buttons ── -->
@@ -176,6 +188,10 @@ include __DIR__ . '/../includes/public_header.php';
                         simSubtitle.innerHTML =
                             'Session #' + data.session_id +
                             ' &nbsp;|&nbsp; ' + (opt.dataset.name || opt.textContent.trim());
+                    }
+                    const timerDisplayEl = document.getElementById('timerDisplay');
+                    if (timerDisplayEl) {
+                        timerDisplayEl.dataset.timerMinutes = data.timer_minutes ?? '';
                     }
                     btn.disabled = false;
                 } else {
