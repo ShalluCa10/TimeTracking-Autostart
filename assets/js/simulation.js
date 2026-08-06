@@ -6,6 +6,7 @@ let lapStart = null;
 let animFrame = null;
 let currentLap = 0;
 let lapTimes = [];
+let sessionTimerMs = null;
 
 const carDot = document.getElementById('car-dot');
 const timerDisplay = document.getElementById('timerDisplay');
@@ -67,7 +68,18 @@ function animate(timestamp) {
     if (!running) return;
 
     const sessionElapsed = timestamp - sessionStart;
-    timerDisplay.textContent = formatTime(sessionElapsed);
+
+    if (sessionTimerMs !== null) {
+        const remaining = sessionTimerMs - sessionElapsed;
+        if (remaining <= 0) {
+            timerDisplay.textContent = '00:00';
+            endSession(true);
+            return;
+        }
+        timerDisplay.textContent = formatTime(remaining);
+    } else {
+        timerDisplay.textContent = formatTime(sessionElapsed);
+    }
 
     const lapElapsed = performance.now() - lapStart;
     const progress = Math.min(lapElapsed / LAP_DURATION_MS, 1);
@@ -174,6 +186,9 @@ btnStart.addEventListener('click', async function () {
     sessionStart = performance.now();
     lapStart = sessionStart;
 
+    const timerMinutes = parseFloat(timerDisplay?.dataset.timerMinutes);
+    sessionTimerMs = timerMinutes > 0 ? timerMinutes * 60000 : null;
+
     lapDisplay.textContent = 'LAP 0';
     lapList.innerHTML = '';
 
@@ -190,8 +205,12 @@ btnCompleteLap.addEventListener('click', function () {
 });
 
 btnEnd.addEventListener('click', function () {
+    endSession(false);
+});
+
+function endSession(autoEnded) {
     if (!running && lapTimes.length === 0) {
-        alert('Start a session first!');
+        if (!autoEnded) alert('Start a session first!');
         return;
     }
 
@@ -203,7 +222,7 @@ btnEnd.addEventListener('click', function () {
     btnEnd.disabled = true;
 
     if (lapTimes.length === 0) {
-        alert('No laps recorded.');
+        if (!autoEnded) alert('No laps recorded.');
         return;
     }
 
@@ -245,4 +264,4 @@ btnEnd.addEventListener('click', function () {
             console.error('Save error:', err);
             alert('Network error while saving laps.');
         });
-});
+}

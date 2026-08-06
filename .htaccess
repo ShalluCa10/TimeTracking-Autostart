@@ -1,0 +1,4 @@
+RewriteEngine On
+
+# Route /simulation.php to the page in /pages/ when the root file is absent
+RewriteRule ^simulation\.php$ pages/simulation.php [L,QSA]

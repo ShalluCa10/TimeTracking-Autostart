@@ -11,7 +11,12 @@ if (!$session_id) {
 $conn = getConnection();
 
 // Get session info
-$sessionStmt = $conn->prepare("SELECT * FROM sessions WHERE session_id = ?");
+$sessionStmt = $conn->prepare("
+    SELECT s.*, sc.schedule_name
+    FROM sessions s
+    LEFT JOIN schedules sc ON sc.schedule_id = s.schedule_id
+    WHERE s.session_id = ?
+");
 $sessionStmt->bind_param('i', $session_id);
 $sessionStmt->execute();
 $session = $sessionStmt->get_result()->fetch_assoc();
@@ -39,7 +44,7 @@ if (!empty($laps)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Session Results</title>
-    <link rel="stylesheet" href="../assets/css/results.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 
 <body>
@@ -48,7 +53,7 @@ if (!empty($laps)) {
         <div class="results-header">
             <h1>🏁 Session Results</h1>
             <p class="session-label">Session #<?= $session_id ?> &mdash;
-                <?= $session ? htmlspecialchars($session['event_name'] ?? 'Unknown Event') : 'Unknown Event' ?>
+                <?= $session ? htmlspecialchars($session['schedule_name'] ?? 'Unknown Schedule') : 'Unknown Schedule' ?>
             </p>
         </div>
 
@@ -115,7 +120,7 @@ if (!empty($laps)) {
         <?php endif; ?>
 
         <div class="actions">
-            <a href="simulation.php" class="btn-back">← Back to Events</a>
+            <a href="/simulation.php" class="btn-back">← Back to Schedules</a>
         </div>
 
     </div>

@@ -1,11 +1,13 @@
 <?php
-require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../../../config/config.php';
+require_once __DIR__ . '/../../../config/db.php';
+require_once __DIR__ . '/../../../includes/auth.php';
+require_once __DIR__ . '/../../../includes/helpers.php';
 
 requireLogin();
 
 $conn = getConnection();
+ensureGameTables($conn);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -35,8 +37,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $type = $_POST['item_type'] ?? '';
         $raw = trim($_POST['items'] ?? '');
 
-        $allowed = ['game_tracks', 'game_cars', 'game_racers'];
-        $table = 'game_' . $type;
+        $tableMap = ['tracks' => 'game_events', 'cars' => 'game_teams'];
+        $allowed = ['game_events', 'game_teams'];
+        $table = $tableMap[$type] ?? '';
 
         if ($versionId > 0 && in_array($table, $allowed) && $raw !== '') {
             $items = preg_split('/[\n,]+/', $raw);
@@ -67,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int) ($_POST['item_id'] ?? 0);
         $table = $_POST['item_table'] ?? '';
 
-        $allowed = ['game_tracks', 'game_cars', 'game_racers'];
+        $allowed = ['game_events', 'game_teams'];
         if ($id > 0 && in_array($table, $allowed)) {
             $stmt = $conn->prepare("DELETE FROM `$table` WHERE id = ?");
             $stmt->bind_param('i', $id);
@@ -87,31 +90,25 @@ $versions = $conn->query('SELECT * FROM game_versions ORDER BY name ASC')
 
 $activeVersionId = (int) ($_GET['version_id'] ?? ($versions[0]['id'] ?? 0));
 
-$tracks = $cars = $racers = [];
+$tracks = $cars = [];
 if ($activeVersionId > 0) {
-    $stmt = $conn->prepare('SELECT * FROM game_tracks WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
+    $stmt = $conn->prepare('SELECT * FROM game_events WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
     $stmt->bind_param('i', $activeVersionId);
     $stmt->execute();
     $tracks = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 
-    $stmt = $conn->prepare('SELECT * FROM game_cars WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
+    $stmt = $conn->prepare('SELECT * FROM game_teams WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
     $stmt->bind_param('i', $activeVersionId);
     $stmt->execute();
     $cars = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmt->close();
-
-    $stmt = $conn->prepare('SELECT * FROM game_racers WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
-    $stmt->bind_param('i', $activeVersionId);
-    $stmt->execute();
-    $racers = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 }
 
 $conn->close();
 
 $pageTitle = 'Manage Game';
-include __DIR__ . '/../includes/header.php';
+include __DIR__ . '/../../../includes/header.php';
 ?>
 
 <?php if (isset($_SESSION['flash'])): ?>
@@ -123,9 +120,9 @@ include __DIR__ . '/../includes/header.php';
 <?php endif; ?>
 
 <!-- Page Header -->
-<div class="page-header">
-    <h2>Manage Game</h2>
-    <a href="dashboard.php" class="btn btn-secondary">← Back to Dashboard</a>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="h4 fw-bold text-uppercase mb-0">Manage Game</h2>
+    <a href="../dashboard.php" class="btn btn-secondary">← Back to Dashboard</a>
 </div>
 
 <!-- Version Bar -->
@@ -154,8 +151,7 @@ include __DIR__ . '/../includes/header.php';
                     <?php endif; ?>
 
                     <?php if ($activeVersionId > 0): ?>
-                        <form method="POST"
-                            onsubmit="return confirm('Delete this version and ALL its tracks, cars and racers?')">
+                        <form method="POST" onsubmit="return confirm('Delete this version and ALL its events and teams?')">
                             <input type="hidden" name="action" value="delete_version">
                             <input type="hidden" name="version_id" value="<?= $activeVersionId ?>">
                             <button type="submit" class="btn btn-danger">Delete</button>
@@ -184,18 +180,17 @@ include __DIR__ . '/../includes/header.php';
 
 <?php if ($activeVersionId > 0): ?>
 
-    <div class="row g-4">
+    <div class="row g-4 justify-content-center">
 
         <?php
         $panels = [
-            ['label' => 'Tracks', 'type' => 'tracks', 'data' => $tracks, 'table' => 'game_tracks', 'placeholder' => "One per line or comma separated\ne.g. Monza\nSilverstone\nSpa"],
-            ['label' => 'Cars', 'type' => 'cars', 'data' => $cars, 'table' => 'game_cars', 'placeholder' => "One per line or comma separated\ne.g. Ferrari SF-24\nRed Bull RB20"],
-            ['label' => 'Racers', 'type' => 'racers', 'data' => $racers, 'table' => 'game_racers', 'placeholder' => "One per line or comma separated\ne.g. Leclerc\nVerstappen\nHamilton"],
+            ['label' => 'Teams', 'type' => 'cars', 'data' => $cars, 'table' => 'game_teams', 'placeholder' => "One per line or comma separated\ne.g. Ferrari\nMercedes\nRed Bull"],
+            ['label' => 'Events', 'type' => 'tracks', 'data' => $tracks, 'table' => 'game_events', 'placeholder' => "One per line or comma separated\ne.g. Monaco GP\nSilverstone\nSpa"],
         ];
         ?>
 
         <?php foreach ($panels as $panel): ?>
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-6 col-xl-5">
                 <div class="card h-100">
 
                     <div class="card-header">
@@ -207,7 +202,7 @@ include __DIR__ . '/../includes/header.php';
                     </div>
 
                     <!-- Bulk add form -->
-                    <div class="p-3" style="border-bottom: 1px solid var(--border); background: var(--bg-card);">
+                    <div class="p-3 border-bottom">
                         <form method="POST" class="d-flex flex-column gap-2">
                             <input type="hidden" name="action" value="bulk_add">
                             <input type="hidden" name="version_id" value="<?= $activeVersionId ?>">
@@ -218,17 +213,31 @@ include __DIR__ . '/../includes/header.php';
                         </form>
                     </div>
 
-                    <!-- Item list -->
-                    <ul class="manage-card__list sortable-list" data-table="<?= $panel['table'] ?>"
-                        id="list-<?= $panel['type'] ?>">
+                    <!-- Item grid -->
+                    <ul class="sortable-list item-grid" data-table="<?= $panel['table'] ?>" id="list-<?= $panel['type'] ?>">
                         <?php if (empty($panel['data'])): ?>
-                            <li class="manage-card__empty">No <?= $panel['type'] ?> yet.</li>
+                            <li class="manage-card__empty">No <?= $panel['label'] ?> yet.</li>
                         <?php else: ?>
                             <?php foreach ($panel['data'] as $item): ?>
+                                <?php
+                                // Build 2-letter initials fallback (e.g. "Ferrari" -> "FE")
+                                $clean = preg_replace('/[^A-Za-z0-9]/', '', $item['name']);
+                                $initials = $clean !== '' ? strtoupper(mb_substr($clean, 0, 2)) : '?';
+                                ?>
                                 <li class="sortable-item" data-id="<?= $item['id'] ?>">
-                                    <span class="drag-handle" title="Drag to reorder">⠿</span>
 
-                                    <!-- ── Photo thumbnail ── -->
+                                    <!-- Overlay toolbar: drag handle + delete -->
+                                    <div class="item-card__toolbar">
+                                        <span class="drag-handle" title="Drag to reorder">⠿</span>
+                                        <form method="POST" class="item-delete-form">
+                                            <input type="hidden" name="action" value="delete_item">
+                                            <input type="hidden" name="item_id" value="<?= $item['id'] ?>">
+                                            <input type="hidden" name="item_table" value="<?= $panel['table'] ?>">
+                                            <button type="submit" class="btn-icon" title="Delete">✕</button>
+                                        </form>
+                                    </div>
+
+                                    <!-- Photo -->
                                     <div class="item-photo-wrap">
                                         <?php if (!empty($item['image'])): ?>
                                             <img src="<?= htmlspecialchars($item['image']) ?>" class="item-thumb"
@@ -236,7 +245,7 @@ include __DIR__ . '/../includes/header.php';
                                                 alt="<?= htmlspecialchars($item['name']) ?>">
                                         <?php else: ?>
                                             <div class="item-thumb item-thumb--empty" id="thumb-<?= $panel['table'] ?>-<?= $item['id'] ?>">
-                                                📷
+                                                <?= $initials ?>
                                             </div>
                                         <?php endif; ?>
                                         <label class="item-photo-btn" title="Upload photo"
@@ -247,17 +256,11 @@ include __DIR__ . '/../includes/header.php';
                                     </div>
 
                                     <span class="item-name"><?= htmlspecialchars($item['name']) ?></span>
-
-                                    <form method="POST">
-                                        <input type="hidden" name="action" value="delete_item">
-                                        <input type="hidden" name="item_id" value="<?= $item['id'] ?>">
-                                        <input type="hidden" name="item_table" value="<?= $panel['table'] ?>">
-                                        <button type="submit" class="btn-icon" title="Delete">✕</button>
-                                    </form>
                                 </li>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </ul>
+
 
                 </div>
             </div>
@@ -266,96 +269,178 @@ include __DIR__ . '/../includes/header.php';
     </div>
 
 <?php else: ?>
-    <p class="empty-state">No versions yet. Add one above to get started.</p>
+    <p class="text-muted py-4 mb-0">No versions yet. Add one above to get started.</p>
 <?php endif; ?>
 
 <style>
-    /* ── Sortable rows ── */
-    .sortable-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 6px 12px;
-        border-bottom: 1px solid var(--border);
-        transition: background 0.15s;
+    /* ── Grid container ── */
+    .item-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        gap: 16px;
+        list-style: none;
+        padding: 16px;
+        margin: 0;
+        max-height: 620px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(225, 6, 0, 0.55) rgba(255, 255, 255, 0.06);
     }
 
-    .sortable-item:last-child {
-        border-bottom: none;
+    .item-grid::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .item-grid::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 999px;
+    }
+
+    .item-grid::-webkit-scrollbar-thumb {
+        background: rgba(225, 6, 0, 0.55);
+        border-radius: 999px;
+    }
+
+    .item-grid::-webkit-scrollbar-thumb:hover {
+        background: rgba(225, 6, 0, 0.8);
+    }
+
+    /* Events list grows to fit its content instead of scrolling */
+    #list-tracks {
+        max-height: none;
+        overflow-y: visible;
+    }
+
+    /* ── Card ── */
+    .sortable-item {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        box-shadow: 0 12px 28px rgba(2, 8, 23, 0.28);
+        min-height: 100%;
+    }
+
+    .sortable-item:hover {
+        transform: translateY(-4px) scale(1.01);
+        border-color: rgba(225, 6, 0, 0.55);
+        box-shadow: 0 18px 36px rgba(2, 8, 23, 0.42);
     }
 
     .sortable-item.dragging {
-        opacity: 0.4;
+        opacity: 0.45;
+        transform: scale(0.98);
     }
 
     .sortable-item.drag-over {
-        background: rgba(255, 255, 255, 0.06);
-        border-top: 2px solid #e10600;
+        border-color: #e10600;
+        box-shadow: 0 0 0 2px rgba(225, 6, 0, 0.35);
+    }
+
+    /* Accent per panel type */
+    #list-tracks .sortable-item {
+        border-left: 3px solid #0057ff;
+    }
+
+    #list-cars .sortable-item {
+        border-left: 3px solid #e10600;
+    }
+
+    /* ── Toolbar overlay (drag handle + delete) ── */
+    .item-card__toolbar {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        right: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 3;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+        pointer-events: none;
+    }
+
+    .sortable-item:hover .item-card__toolbar {
+        opacity: 1;
     }
 
     .drag-handle {
         cursor: grab;
-        color: #444;
-        font-size: 1rem;
+        color: #eee;
+        font-size: 0.85rem;
+        background: rgba(0, 0, 0, 0.7);
+        border-radius: 999px;
+        padding: 4px 8px;
+        pointer-events: auto;
         user-select: none;
-        flex-shrink: 0;
     }
 
     .drag-handle:active {
         cursor: grabbing;
     }
 
-    .item-name {
-        flex: 1;
-        font-size: 0.88rem;
-        font-weight: 600;
-        letter-spacing: 0.03em;
-        color: #eee;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    .item-delete-form {
+        pointer-events: auto;
     }
 
-    .sortable-item form {
-        flex-shrink: 0;
+    .btn-icon {
+        background: rgba(0, 0, 0, 0.7);
+        border: none;
+        color: #f87171;
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
     }
 
-    .reorder-saving {
-        opacity: 0.5;
-        pointer-events: none;
+    .btn-icon:hover {
+        background: #e10600;
+        color: #fff;
     }
 
     /* ── Photo cell ── */
     .item-photo-wrap {
         position: relative;
-        flex-shrink: 0;
-        width: 48px;
-        height: 48px;
-        border-radius: 8px;
+        width: 100%;
+        aspect-ratio: 1 / 1;
         overflow: hidden;
+        background: #020617;
+    }
+
+    /* Cars are square, Schedules are widescreen (track layouts) */
+    #list-tracks .item-photo-wrap {
+        aspect-ratio: 16 / 9;
     }
 
     .item-thumb {
-        width: 48px;
-        height: 48px;
+        width: 100%;
+        height: 100%;
         object-fit: cover;
         display: block;
-        border-radius: 8px;
-        border: 1px solid #2a2a2a;
-        transition: filter 0.2s;
+        transition: transform 0.25s ease, filter 0.25s ease;
     }
 
     .item-thumb--empty {
-        width: 48px;
-        height: 48px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #141414;
-        border: 1px dashed #333;
-        border-radius: 8px;
-        font-size: 1.1rem;
-        color: #444;
+        background: linear-gradient(135deg, #111827 0%, #0f172a 100%);
+        font-family: 'Orbitron', sans-serif;
+        font-weight: 800;
+        font-size: 1.25rem;
+        letter-spacing: 0.05em;
+        color: #e10600;
+    }
+
+    #list-tracks .item-thumb--empty {
+        color: #0057ff;
     }
 
     /* Hover overlay — pencil icon */
@@ -366,12 +451,11 @@ include __DIR__ . '/../includes/header.php';
         align-items: center;
         justify-content: center;
         background: rgba(225, 6, 0, 0.72);
-        border-radius: 8px;
-        font-size: 0.85rem;
+        font-size: 0.95rem;
         color: #fff;
         cursor: pointer;
         opacity: 0;
-        transition: opacity 0.15s;
+        transition: opacity 0.15s ease;
     }
 
     .item-photo-wrap:hover .item-photo-btn {
@@ -379,10 +463,10 @@ include __DIR__ . '/../includes/header.php';
     }
 
     .item-photo-wrap:hover .item-thumb {
-        filter: brightness(0.5);
+        transform: scale(1.06);
+        filter: brightness(0.72) saturate(1.08);
     }
 
-    /* Upload pulse */
     .item-thumb.uploading {
         opacity: 0.4;
         animation: pulse 0.8s infinite alternate;
@@ -394,27 +478,53 @@ include __DIR__ . '/../includes/header.php';
         }
     }
 
-    /* ── Panel accent lines ── */
-    #list-tracks .sortable-item {
-        border-left: 3px solid #0057ff;
+    /* ── Name label under photo ── */
+    .item-name {
+        display: block;
+        padding: 10px 10px 12px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #f8fafc;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(2, 8, 23, 0.45);
     }
 
-    #list-cars .sortable-item {
-        border-left: 3px solid #e10600;
+    /* ── Empty state ── */
+    .manage-card__empty {
+        grid-column: 1 / -1;
+        text-align: center;
+        color: #64748b;
+        font-size: 0.8rem;
+        padding: 24px;
     }
 
-    #list-racers .sortable-item {
-        border-left: 3px solid #00ff88;
+    .reorder-saving {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+
+    @media (max-width: 576px) {
+        .item-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            padding: 12px;
+            max-height: 480px;
+        }
     }
 </style>
+
 
 
 <script>
     /* ── drag/drop reorder ── */
     (function () {
-        const API = window.location.origin
-            + window.location.pathname.replace(/\/pages\/[^\/]+$/, '')
-            + '/api/reorder_item.php';
+        const API = window.location.origin + '/api/reorder_item.php';
 
         async function saveOrder(list) {
             const table = list.dataset.table;
@@ -470,9 +580,7 @@ include __DIR__ . '/../includes/header.php';
 
     /* ── photo upload ── */
     (function () {
-        const UPLOAD_API = window.location.origin
-            + window.location.pathname.replace(/\/pages\/[^\/]+$/, '')
-            + '/api/upload_image.php';
+        const UPLOAD_API = window.location.origin + '/api/upload_image.php';
 
         document.querySelectorAll('.item-upload-input').forEach(input => {
             input.addEventListener('change', async function () {
@@ -531,4 +639,4 @@ include __DIR__ . '/../includes/header.php';
     }
 </script>
 
-<?php include __DIR__ . '/../includes/footer.php'; ?>
+<?php include __DIR__ . '/../../../includes/footer.php'; ?>

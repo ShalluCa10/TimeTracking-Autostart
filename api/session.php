@@ -2,7 +2,7 @@
 // API endpoint for simulator session lookup
 // GET actions:
 //   ?action=events
-//   ?action=sessions&event_id=1
+//   ?action=sessions&schedule_id=1
 //   ?action=session&session_id=1
 //   ?action=next
 
@@ -15,11 +15,15 @@ $conn = getConnection();
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $action = $_GET['action'] ?? 'events';
 
-    // ── GET /api/session.php?action=sessions&event_id=1 ──
-    if ($action === 'sessions' && !empty($_GET['event_id'])) {
-        $eventId = (int) $_GET['event_id'];
-        $stmt = $conn->prepare('SELECT * FROM sessions WHERE event_id = ? ORDER BY session_id DESC');
-        $stmt->bind_param('i', $eventId);
+    // ── GET /api/session.php?action=sessions&schedule_id=1 ──
+    if ($action === 'sessions' && !empty($_GET['schedule_id'])) {
+        $scheduleId = (int) $_GET['schedule_id'];
+        $stmt = $conn->prepare('
+            SELECT session_id, schedule_id, f1_version, participant_name,
+                   team AS car, event AS track, best_lap_time, created_at
+            FROM sessions WHERE schedule_id = ? ORDER BY session_id DESC
+        ');
+        $stmt->bind_param('i', $scheduleId);
         $stmt->execute();
         $sessions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
@@ -31,7 +35,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($action === 'session' && !empty($_GET['session_id'])) {
         $sessionId = (int) $_GET['session_id'];
 
-        $stmt = $conn->prepare('SELECT * FROM sessions WHERE session_id = ? LIMIT 1');
+        $stmt = $conn->prepare('
+            SELECT session_id, schedule_id, f1_version, participant_name,
+                   team AS car, event AS track, best_lap_time, created_at
+            FROM sessions WHERE session_id = ? LIMIT 1
+        ');
         $stmt->bind_param('i', $sessionId);
         $stmt->execute();
         $session = $stmt->get_result()->fetch_assoc();
@@ -49,13 +57,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $laps = $lapsStmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $lapsStmt->close();
 
-        // Include event
-        $event = null;
-        if (!empty($session['event_id'])) {
-            $e = $conn->prepare('SELECT * FROM events WHERE event_id = ? LIMIT 1');
-            $e->bind_param('i', $session['event_id']);
+        // Include schedule
+        $schedule = null;
+        if (!empty($session['schedule_id'])) {
+            $e = $conn->prepare('SELECT schedule_id, schedule_name, team AS car, event AS track, racer FROM schedules WHERE schedule_id = ? LIMIT 1');
+            $e->bind_param('i', $session['schedule_id']);
             $e->execute();
-            $event = $e->get_result()->fetch_assoc();
+            $schedule = $e->get_result()->fetch_assoc();
             $e->close();
         }
 
@@ -63,14 +71,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'success' => true,
             'session' => $session,
             'laps' => $laps,
-            'event' => $event,
+            'schedule' => $schedule,
         ]);
         exit();
     }
 
     
     if ($action === 'next') {
-        $stmt = $conn->prepare('SELECT * FROM sessions ORDER BY session_id DESC LIMIT 1');
+        $stmt = $conn->prepare('SELECT session_id, schedule_id, f1_version, participant_name, team AS car, event AS track, best_lap_time, created_at FROM sessions ORDER BY session_id DESC LIMIT 1');
         $stmt->execute();
         $nextSession = $stmt->get_result()->fetch_assoc();
         $stmt->close();
@@ -80,22 +88,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             exit();
         }
 
-        $event = null;
-        if (!empty($nextSession['event_id'])) {
-            $e = $conn->prepare('SELECT * FROM events WHERE event_id = ? LIMIT 1');
-            $e->bind_param('i', $nextSession['event_id']);
+        $schedule = null;
+        if (!empty($nextSession['schedule_id'])) {
+            $e = $conn->prepare('SELECT schedule_id, schedule_name, team AS car, event AS track, racer FROM schedules WHERE schedule_id = ? LIMIT 1');
+            $e->bind_param('i', $nextSession['schedule_id']);
             $e->execute();
-            $event = $e->get_result()->fetch_assoc();
+            $schedule = $e->get_result()->fetch_assoc();
             $e->close();
         }
 
-        echo json_encode(['success' => true, 'next' => $nextSession, 'event' => $event]);
+        echo json_encode(['success' => true, 'next' => $nextSession, 'schedule' => $schedule]);
         exit();
     }
 
-    $result = $conn->query('SELECT * FROM events ORDER BY event_date DESC');
-    $events = $result->fetch_all(MYSQLI_ASSOC);
-    echo json_encode(['success' => true, 'events' => $events]);
+    $result = $conn->query('SELECT schedule_id, schedule_name, schedule_date, team AS car, event AS track, racer, status FROM schedules ORDER BY schedule_date DESC');
+    $schedules = $result->fetch_all(MYSQLI_ASSOC);
+    echo json_encode(['success' => true, 'schedules' => $schedules]);
     exit();
 }
 
@@ -114,23 +122,23 @@ if (($data['api_key'] ?? '') !== 'changeme123') {
     exit();
 }
 
-$eventId = (int) ($data['event_id'] ?? 0);
+$scheduleId = (int) ($data['schedule_id'] ?? 0);
 $participantName = trim($data['participant_name'] ?? '');
 $f1Version = trim($data['f1_version'] ?? '');
 $car = trim($data['car'] ?? '');
 $track = trim($data['track'] ?? '');
 $bestLapTime = trim($data['best_lap_time'] ?? ''); 
 
-if ($eventId === 0 || $participantName === '') {
+if ($scheduleId === 0 || $participantName === '') {
     http_response_code(400);
-    echo json_encode(['error' => 'event_id and participant_name are required']);
+    echo json_encode(['error' => 'schedule_id and participant_name are required']);
     exit();
 }
 
 $stmt = $conn->prepare(
-    'INSERT INTO sessions (event_id, participant_name, f1_version, car, track, best_lap_time) VALUES (?, ?, ?, ?, ?, ?)'
+    'INSERT INTO sessions (schedule_id, participant_name, f1_version, team, event, best_lap_time) VALUES (?, ?, ?, ?, ?, ?)'
 );
-$stmt->bind_param('isssss', $eventId, $participantName, $f1Version, $car, $track, $bestLapTime);
+$stmt->bind_param('isssss', $scheduleId, $participantName, $f1Version, $car, $track, $bestLapTime);
 $stmt->execute();
 $newId = $stmt->insert_id;
 $stmt->close();

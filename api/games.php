@@ -7,41 +7,41 @@ header('Content-Type: application/json');
 $conn = getConnection();
 ensureGameTables($conn);
 
-action:
-$action = $_GET['action'] ?? 'games';
+$action = $_GET['action'] ?? 'versions';
 
-if ($action === 'games') {
-    $games = getGameOptions($conn);
-    echo json_encode(['success' => true, 'games' => $games]);
+if ($action === 'versions' || $action === 'games') {
+    $versions = $conn->query('SELECT * FROM game_versions ORDER BY name ASC')->fetch_all(MYSQLI_ASSOC);
+    echo json_encode(['success' => true, 'versions' => $versions]);
     exit();
 }
 
-if ($action === 'game' && !empty($_GET['game_id'])) {
-    $gameId = (int) $_GET['game_id'];
-    $game = getGameItemById($conn, 'games', 'game_id', $gameId);
-    if (!$game) {
-        echo json_encode(['success' => false, 'message' => 'Game not found']);
-        exit();
-    }
-    $cars = getGameItems($conn, $gameId, 'game_cars', 'car_id');
-    $tracks = getGameItems($conn, $gameId, 'game_tracks', 'track_id');
-    $drivers = getGameItems($conn, $gameId, 'game_drivers', 'driver_id');
-    echo json_encode(['success' => true, 'game' => $game, 'cars' => $cars, 'tracks' => $tracks, 'drivers' => $drivers]);
-    exit();
-}
+if ($action === 'version' && !empty($_GET['version_id'])) {
+    $versionId = (int) $_GET['version_id'];
 
-if ($action === 'event_defaults' && !empty($_GET['event_id'])) {
-    $eventId = (int) $_GET['event_id'];
-    $defaults = getEventGameDefaults($conn, $eventId);
-    if (!$defaults) {
-        echo json_encode(['success' => false, 'message' => 'No defaults for this event']);
+    $stmt = $conn->prepare('SELECT * FROM game_versions WHERE id = ? LIMIT 1');
+    $stmt->bind_param('i', $versionId);
+    $stmt->execute();
+    $version = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$version) {
+        echo json_encode(['success' => false, 'message' => 'Version not found']);
         exit();
     }
-    $game = getGameItemById($conn, 'games', 'game_id', $defaults['game_id']);
-    $car = getGameItemById($conn, 'game_cars', 'car_id', $defaults['car_id']);
-    $track = getGameItemById($conn, 'game_tracks', 'track_id', $defaults['track_id']);
-    $driver = getGameItemById($conn, 'game_drivers', 'driver_id', $defaults['driver_id']);
-    echo json_encode(['success' => true, 'defaults' => $defaults, 'game' => $game, 'car' => $car, 'track' => $track, 'driver' => $driver]);
+
+    $stmt = $conn->prepare('SELECT id, name FROM game_teams WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
+    $stmt->bind_param('i', $versionId);
+    $stmt->execute();
+    $cars = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+
+    $stmt = $conn->prepare('SELECT id, name FROM game_events WHERE version_id = ? ORDER BY sort_order ASC, name ASC');
+    $stmt->bind_param('i', $versionId);
+    $stmt->execute();
+    $tracks = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+
+    echo json_encode(['success' => true, 'game' => $version, 'cars' => $cars, 'tracks' => $tracks]);
     exit();
 }
 

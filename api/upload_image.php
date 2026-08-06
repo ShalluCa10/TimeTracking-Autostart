@@ -9,7 +9,7 @@ header('Content-Type: application/json');
 
 $table = $_POST['table'] ?? '';
 $id = (int) ($_POST['id'] ?? 0);
-$allowed = ['game_tracks', 'game_cars', 'game_racers'];
+$allowed = ['game_events', 'game_teams'];
 
 if (!in_array($table, $allowed) || $id <= 0) {
   echo json_encode(['error' => 'Invalid table or id.']);

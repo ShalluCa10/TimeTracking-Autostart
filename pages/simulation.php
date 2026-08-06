@@ -1,68 +1,78 @@
+<!-- This is forr the capstone class, before actually toggle on python code.-->
+
 <?php
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/helpers.php';
 
-requireLogin();
-
 $conn = getConnection();
+ensureScheduleTimerColumn($conn);
 $sessionId = (int) ($_GET['session_id'] ?? 0);
-$eventId = (int) ($_GET['event_id'] ?? 0);
+$scheduleId = (int) ($_GET['schedule_id'] ?? 0);
 
-$events = $conn->query("
-    SELECT event_id, event_name, car, track, racer
-    FROM   events
+$schedules = $conn->query("
+    SELECT schedule_id, schedule_name, team AS car, event AS track, racer
+    FROM   schedules
     WHERE  status = 'live'
-    ORDER  BY event_date DESC
+    ORDER  BY schedule_date DESC
 ")->fetch_all(MYSQLI_ASSOC);
+
+$sessionTimerMinutes = null;
+if ($sessionId > 0) {
+    $stmt = $conn->prepare('SELECT timer_minutes FROM sessions WHERE session_id = ? LIMIT 1');
+    $stmt->bind_param('i', $sessionId);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    $sessionTimerMinutes = $row['timer_minutes'] ?? null;
+}
 
 $conn->close();
 
 $pageTitle = 'Simulator';
-include __DIR__ . '/../includes/header.php';
+include __DIR__ . '/../includes/public_header.php';
 ?>
 
-<link rel="stylesheet" href="/assets/css/simulation.css">
+<link rel="stylesheet" href="/assets/css/style.css">
 
 <div class="sim-wrapper py-4">
 
     <h1 class="sim-title">F1 LAP SIMULATOR</h1>
     <p class="sim-subtitle" id="simSubtitle">
-        Session #<?= $sessionId ?> &nbsp;|&nbsp; Event #<?= $eventId ?>
+        Session #<?= $sessionId ?> &nbsp;|&nbsp; Schedule #<?= $scheduleId ?>
     </p>
 
-    <!-- ── EVENT SELECTOR ── -->
+    <!-- ── SCHEDULE SELECTOR ── -->
     <?php if ($sessionId === 0): ?>
-        <div id="event-selector" style="margin-bottom: 40px;">
+        <div id="schedule-selector" style="margin-bottom: 40px;">
 
-            <?php if (empty($events)): ?>
+            <?php if (empty($schedules)): ?>
                 <p class="sim-empty">
-                    No live events available.
-                    <a href="/pages/manage_events.php">Go live on an event first.</a>
+                    No live schedules available.
+                    <a href="/pages/admin/schedules/manage_schedules.php">Go live on a schedule first.</a>
                 </p>
             <?php else: ?>
 
                 <div class="sim-pre__group">
-                    <label for="sel-event">SELECT EVENT</label>
-                    <select id="sel-event">
-                        <option value="">— Select Event —</option>
-                        <?php foreach ($events as $ev): ?>
-                            <option value="<?= $ev['event_id'] ?>" data-car="<?= htmlspecialchars($ev['car'] ?? '') ?>"
-                                data-track="<?= htmlspecialchars($ev['track'] ?? '') ?>"
-                                data-racer="<?= htmlspecialchars($ev['racer'] ?? '') ?>"
-                                data-name="<?= htmlspecialchars($ev['event_name']) ?>">
-                                <?= htmlspecialchars($ev['event_name']) ?>
+                    <label for="sel-schedule">SELECT SCHEDULE</label>
+                    <select id="sel-schedule">
+                        <option value="">— Select Schedule —</option>
+                        <?php foreach ($schedules as $sc): ?>
+                            <option value="<?= $sc['schedule_id'] ?>" data-car="<?= htmlspecialchars($sc['car'] ?? '') ?>"
+                                data-track="<?= htmlspecialchars($sc['track'] ?? '') ?>"
+                                data-racer="<?= htmlspecialchars($sc['racer'] ?? '') ?>"
+                                data-name="<?= htmlspecialchars($sc['schedule_name']) ?>">
+                                <?= htmlspecialchars($sc['schedule_name']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
 
-                <!-- Event preview -->
-                <div id="event-preview" class="sim-pre__preview" style="display:none;">
-                    <div class="sim-pre__detail"><span>Car</span> <strong id="prev-car">—</strong></div>
-                    <div class="sim-pre__detail"><span>Track</span> <strong id="prev-track">—</strong></div>
-                    <div class="sim-pre__detail"><span>Racer</span> <strong id="prev-racer">—</strong></div>
+                <!-- Schedule preview -->
+                <div id="schedule-preview" class="sim-pre__preview" style="display:none;">
+                    <div class="sim-pre__detail"><span>Team</span> <strong id="prev-car">—</strong></div>
+                    <div class="sim-pre__detail"><span>Event</span> <strong id="prev-track">—</strong></div>
+                    <div class="sim-pre__detail"><span>Participant</span> <strong id="prev-racer">—</strong></div>
                 </div>
 
                 <p id="selector-status" style="font-size:0.8rem; min-height:1.2em; color:#8888aa; margin-bottom:0;"></p>
@@ -83,7 +93,8 @@ include __DIR__ . '/../includes/header.php';
     </div>
 
     <!-- ── Timer ── -->
-    <div class="timer-display" id="timerDisplay">00:00</div>
+    <div class="timer-display" id="timerDisplay"
+        data-timer-minutes="<?= $sessionTimerMinutes !== null ? (int) $sessionTimerMinutes : '' ?>">00:00</div>
     <div class="lap-counter" id="lapCounter">LAP 0</div>
 
     <!-- ── Buttons ── -->
@@ -106,19 +117,19 @@ include __DIR__ . '/../includes/header.php';
             <div class="mimicry-title">⚙ INITIALIZING SESSION</div>
 
             <div class="mimicry-row" id="mim-racer">
-                <span class="mimicry-label">RACER</span>
+                <span class="mimicry-label">PARTICIPANT</span>
                 <span class="mimicry-arrows" id="mim-racer-arrows"></span>
                 <span class="mimicry-confirm" id="mim-racer-confirm"></span>
             </div>
 
             <div class="mimicry-row" id="mim-track">
-                <span class="mimicry-label">TRACK</span>
+                <span class="mimicry-label">EVENT</span>
                 <span class="mimicry-arrows" id="mim-track-arrows"></span>
                 <span class="mimicry-confirm" id="mim-track-confirm"></span>
             </div>
 
             <div class="mimicry-row" id="mim-car">
-                <span class="mimicry-label">CAR</span>
+                <span class="mimicry-label">TEAM</span>
                 <span class="mimicry-arrows" id="mim-car-arrows"></span>
                 <span class="mimicry-confirm" id="mim-car-confirm"></span>
             </div>
@@ -133,10 +144,10 @@ include __DIR__ . '/../includes/header.php';
 
 <script>
     (function () {
-        const sel = document.getElementById('sel-event');
+        const sel = document.getElementById('sel-schedule');
         const btn = document.getElementById('startBtn');
         const status = document.getElementById('selector-status');
-        const preview = document.getElementById('event-preview');
+        const preview = document.getElementById('schedule-preview');
         const prevCar = document.getElementById('prev-car');
         const prevTrack = document.getElementById('prev-track');
         const prevRacer = document.getElementById('prev-racer');
@@ -166,7 +177,7 @@ include __DIR__ . '/../includes/header.php';
                 const res = await fetch('/api/create_session.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ event_id: parseInt(this.value) }),
+                    body: JSON.stringify({ schedule_id: parseInt(this.value) }),
                 });
                 const data = await res.json();
 
@@ -177,6 +188,10 @@ include __DIR__ . '/../includes/header.php';
                         simSubtitle.innerHTML =
                             'Session #' + data.session_id +
                             ' &nbsp;|&nbsp; ' + (opt.dataset.name || opt.textContent.trim());
+                    }
+                    const timerDisplayEl = document.getElementById('timerDisplay');
+                    if (timerDisplayEl) {
+                        timerDisplayEl.dataset.timerMinutes = data.timer_minutes ?? '';
                     }
                     btn.disabled = false;
                 } else {
