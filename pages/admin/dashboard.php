@@ -120,6 +120,7 @@ include __DIR__ . '/../../includes/header.php';
                                     <a href="sessions/sessions.php?schedule_id=<?= $schedule['schedule_id'] ?>"
                                         class="btn btn-secondary btn-sm">Sessions</a>
 
+
                                     <?php if ($statusKey === 'live'): ?>
                                         <form method="POST" action="schedules/schedule_status.php">
                                             <input type="hidden" name="schedule_id" value="<?= $schedule['schedule_id'] ?>">
@@ -133,6 +134,11 @@ include __DIR__ . '/../../includes/header.php';
                                             <button type="submit" class="btn btn-secondary btn-sm">Force Live</button>
                                         </form>
                                     <?php endif; ?>
+                                    <button type="button" class="btn btn-primary btn-sm start-f1-btn"
+                                        data-schedule-id="<?= (int) $schedule['schedule_id'] ?>"
+                                        data-schedule-name="<?= htmlspecialchars($schedule['schedule_name'], ENT_QUOTES) ?>">
+                                        Start F1
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -195,3 +201,79 @@ include __DIR__ . '/../../includes/header.php';
 </div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
+<script>
+    document.querySelectorAll('.start-f1-btn').forEach(button => {
+
+        button.addEventListener('click', async function () {
+
+            const scheduleId = this.dataset.scheduleId;
+            const scheduleName = this.dataset.scheduleName;
+
+            const confirmed = confirm(
+                `Start F1 for "${scheduleName}"?`
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            this.disabled = true;
+            this.textContent = 'Starting...';
+
+            try {
+
+                const response = await fetch('/api/session.php', {
+                    method: 'POST',
+
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+
+                    body: JSON.stringify({
+                        api_key: 'changeme123',
+                        schedule_id: Number(scheduleId),
+                        participant_name: 'Staff',
+                        f1_version: 'F1 24',
+                        best_lap_time: ''
+                    })
+                });
+
+                const result = await response.json();
+
+                console.log('Session response:', result);
+
+                if (!response.ok || !result.success) {
+
+                    alert(
+                        'Failed to start F1.\n\n' +
+                        (result.error || 'Unknown error')
+                    );
+
+                    this.disabled = false;
+                    this.textContent = 'Start F1';
+
+                    return;
+                }
+
+                alert(
+                    'F1 session started successfully!\n\n' +
+                    'Session ID: ' + result.session_id
+                );
+
+                this.textContent = 'F1 Starting...';
+
+            } catch (error) {
+
+                console.error(error);
+
+                alert(
+                    'Could not connect to the PHP server.'
+                );
+
+                this.disabled = false;
+                this.textContent = 'Start F1';
+            }
+        });
+
+    });
+</script>

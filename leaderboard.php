@@ -119,7 +119,7 @@ $conn->close();
                 <noscript><button type="submit" class="btn-back">Filter</button></noscript>
             </form>
             <div class="d-flex gap-2">
-                <a class="btn-back" href="/simulation.php">Open Simulator</a>
+                <a class="btn-back" href="/pages/simulation.php">Open Simulator</a>
                 <a class="btn-back" href="/">Back</a>
             </div>
         </div>
