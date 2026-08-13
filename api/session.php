@@ -107,10 +107,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     exit();
 }
 
-
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    echo json_encode(['error' => 'Method not allowed']);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Method not allowed'
+    ]);
     exit();
 }
 
@@ -118,30 +120,223 @@ $data = json_decode(file_get_contents('php://input'), true);
 
 if (($data['api_key'] ?? '') !== 'changeme123') {
     http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized']);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Unauthorized'
+    ]);
     exit();
 }
 
 $scheduleId = (int) ($data['schedule_id'] ?? 0);
 $participantName = trim($data['participant_name'] ?? '');
 $f1Version = trim($data['f1_version'] ?? '');
-$car = trim($data['car'] ?? '');
-$track = trim($data['track'] ?? '');
-$bestLapTime = trim($data['best_lap_time'] ?? ''); 
+$bestLapTime = trim($data['best_lap_time'] ?? '');
 
 if ($scheduleId === 0 || $participantName === '') {
     http_response_code(400);
-    echo json_encode(['error' => 'schedule_id and participant_name are required']);
+    echo json_encode([
+        'success' => false,
+        'error' => 'schedule_id and participant_name are required'
+    ]);
     exit();
 }
 
-$stmt = $conn->prepare(
-    'INSERT INTO sessions (schedule_id, participant_name, f1_version, team, event, best_lap_time) VALUES (?, ?, ?, ?, ?, ?)'
+/*
+|--------------------------------------------------------------------------
+| Get team and track from the selected schedule
+|--------------------------------------------------------------------------
+*/
+
+$scheduleStmt = $conn->prepare(
+    'SELECT team, event, racer
+     FROM schedules
+     WHERE schedule_id = ?
+     LIMIT 1'
 );
-$stmt->bind_param('isssss', $scheduleId, $participantName, $f1Version, $car, $track, $bestLapTime);
+
+$scheduleStmt->bind_param('i', $scheduleId);
+$scheduleStmt->execute();
+
+$schedule = $scheduleStmt->get_result()->fetch_assoc();
+
+$scheduleStmt->close();
+
+if (!$schedule) {
+    http_response_code(404);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Schedule not found'
+    ]);
+    exit();
+}
+
+$car = trim($schedule['team'] ?? '');
+$track = trim($schedule['event'] ?? '');
+
+/*
+|--------------------------------------------------------------------------
+| 1. Create session in MySQL
+|--------------------------------------------------------------------------
+*/
+
+$stmt = $conn->prepare(
+    'INSERT INTO sessions
+    (schedule_id, participant_name, f1_version, team, event, best_lap_time)
+    VALUES (?, ?, ?, ?, ?, ?)'
+);
+
+$stmt->bind_param(
+    'isssss',
+    $scheduleId,
+    $participantName,
+    $f1Version,
+    $car,
+    $track,
+    $bestLapTime
+);
+
 $stmt->execute();
+
 $newId = $stmt->insert_id;
+
 $stmt->close();
+
+
+/*
+|--------------------------------------------------------------------------
+| 2. Send session information to Python
+|--------------------------------------------------------------------------
+*/
+
+$pythonPayload = [
+    'session_id' => $newId,
+    'schedule_id' => $scheduleId,
+    'participant_name' => $participantName,
+    'f1_version' => $f1Version,
+    'team' => $car,
+    'track' => $track
+];
+
+
+$ch = curl_init('http://127.0.0.1:5000/start');
+
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Content-Type: application/json'
+]);
+
+curl_setopt(
+    $ch,
+    CURLOPT_POSTFIELDS,
+    json_encode($pythonPayload)
+);
+
+curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+
+
+$pythonResponse = curl_exec($ch);
+
+
+/*
+|--------------------------------------------------------------------------
+| 3. Handle Python connection error
+|--------------------------------------------------------------------------
+*/
+
+if ($pythonResponse === false) {
+
+    $pythonError = curl_error($ch);
+
+    curl_close($ch);
+    $conn->close();
+
+    http_response_code(500);
+
+    echo json_encode([
+        'success' => false,
+        'session_id' => $newId,
+        'error' => 'Session was created, but Python could not be reached',
+        'python_error' => $pythonError
+    ]);
+
+    exit();
+}
+
+
+$pythonHttpCode = curl_getinfo(
+    $ch,
+    CURLINFO_HTTP_CODE
+);
+
+curl_close($ch);
+
 $conn->close();
 
-echo json_encode(['success' => true, 'session_id' => $newId]);
+
+/*
+|--------------------------------------------------------------------------
+| 4. Return combined result
+|--------------------------------------------------------------------------
+*/
+
+$pythonData = json_decode($pythonResponse, true);
+
+if ($pythonHttpCode >= 400) {
+
+    http_response_code($pythonHttpCode);
+
+    echo json_encode([
+        'success' => false,
+        'session_id' => $newId,
+        'error' => 'Python returned an error',
+        'python_response' => $pythonData
+    ]);
+
+    exit();
+}
+
+
+echo json_encode([
+    'success' => true,
+    'session_id' => $newId,
+    'python' => $pythonData
+]);
+// if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+//     http_response_code(405);
+//     echo json_encode(['error' => 'Method not allowed']);
+//     exit();
+// }
+
+// $data = json_decode(file_get_contents('php://input'), true);
+
+// if (($data['api_key'] ?? '') !== 'changeme123') {
+//     http_response_code(401);
+//     echo json_encode(['error' => 'Unauthorized']);
+//     exit();
+// }
+
+// $scheduleId = (int) ($data['schedule_id'] ?? 0);
+// $participantName = trim($data['participant_name'] ?? '');
+// $f1Version = trim($data['f1_version'] ?? '');
+// $car = trim($data['car'] ?? '');
+// $track = trim($data['track'] ?? '');
+// $bestLapTime = trim($data['best_lap_time'] ?? ''); 
+
+// if ($scheduleId === 0 || $participantName === '') {
+//     http_response_code(400);
+//     echo json_encode(['error' => 'schedule_id and participant_name are required']);
+//     exit();
+// }
+
+// $stmt = $conn->prepare(
+//     'INSERT INTO sessions (schedule_id, participant_name, f1_version, team, event, best_lap_time) VALUES (?, ?, ?, ?, ?, ?)'
+// );
+// $stmt->bind_param('isssss', $scheduleId, $participantName, $f1Version, $car, $track, $bestLapTime);
+// $stmt->execute();
+// $newId = $stmt->insert_id;
+// $stmt->close();
+// $conn->close();
+
+// echo json_encode(['success' => true, 'session_id' => $newId]);
