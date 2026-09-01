@@ -12,6 +12,146 @@ require_once __DIR__ . '/../config/db.php';
 header('Content-Type: application/json');
 $conn = getConnection();
 
+function callPython(string $method, string $path, ?array $payload = null): array
+{
+    $ch = curl_init('http://127.0.0.1:5000' . $path);
+
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+
+    $headers = ['Content-Type: application/json'];
+
+    if (strtoupper($method) === 'POST') {
+        curl_setopt($ch, CURLOPT_POST, true);
+        if ($payload !== null) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        }
+    }
+
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+    $rawResponse = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($rawResponse === false) {
+        return [
+            'ok' => false,
+            'http_code' => 500,
+            'error' => 'Python could not be reached',
+            'details' => $curlError !== '' ? $curlError : 'cURL request failed',
+            'raw_response' => null,
+            'response' => null,
+        ];
+    }
+
+    $decoded = json_decode($rawResponse, true);
+
+    if ($httpCode >= 400 || !is_array($decoded)) {
+        return [
+            'ok' => false,
+            'http_code' => $httpCode >= 400 ? $httpCode : 500,
+            'error' => 'Python returned an error',
+            'details' => null,
+            'raw_response' => $rawResponse,
+            'response' => $decoded,
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'http_code' => $httpCode,
+        'error' => null,
+        'details' => null,
+        'raw_response' => $rawResponse,
+        'response' => $decoded,
+    ];
+}
+
+function quoteForCmd(string $value): string
+{
+    return '"' . str_replace('"', '""', $value) . '"';
+}
+
+function startPythonApiProcess(): array
+{
+    $pythonExe = defined('AUTOSTART_PYTHON_EXE') ? AUTOSTART_PYTHON_EXE : '';
+    $apiScript = defined('AUTOSTART_API_SCRIPT') ? AUTOSTART_API_SCRIPT : '';
+    $logFile = defined('AUTOSTART_API_LOG') ? AUTOSTART_API_LOG : '';
+
+    if (!file_exists($pythonExe)) {
+        return [
+            'ok' => false,
+            'error' => 'Python executable not found',
+            'details' => $pythonExe,
+        ];
+    }
+
+    if (!file_exists($apiScript)) {
+        return [
+            'ok' => false,
+            'error' => 'Python API script not found',
+            'details' => $apiScript,
+        ];
+    }
+
+    $innerCommand = quoteForCmd($pythonExe) . ' ' . quoteForCmd($apiScript)
+        . ' >> ' . quoteForCmd($logFile) . ' 2>&1';
+    $command = 'start "" /B cmd /C ' . quoteForCmd($innerCommand);
+
+    shell_exec($command);
+
+    return [
+        'ok' => true,
+        'error' => null,
+        'details' => null,
+    ];
+}
+
+function ensurePythonApiRunning(): array
+{
+    $statusCheck = callPython('GET', '/status');
+    if ($statusCheck['ok']) {
+        return [
+            'ok' => true,
+            'started_now' => false,
+            'error' => null,
+            'details' => null,
+        ];
+    }
+
+    $startAttempt = startPythonApiProcess();
+    if (!$startAttempt['ok']) {
+        return [
+            'ok' => false,
+            'started_now' => false,
+            'error' => $startAttempt['error'],
+            'details' => $startAttempt['details'],
+        ];
+    }
+
+    for ($i = 0; $i < 12; $i++) {
+        usleep(500000);
+        $statusCheck = callPython('GET', '/status');
+        if ($statusCheck['ok']) {
+            return [
+                'ok' => true,
+                'started_now' => true,
+                'error' => null,
+                'details' => null,
+            ];
+        }
+    }
+
+    return [
+        'ok' => false,
+        'started_now' => true,
+        'error' => 'Python API did not become ready in time',
+        'details' => null,
+    ];
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $action = $_GET['action'] ?? 'events';
 
@@ -101,6 +241,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit();
     }
 
+    if ($action === 'status') {
+        $statusResult = callPython('GET', '/status');
+
+        if (!$statusResult['ok']) {
+            $pythonReady = ensurePythonApiRunning();
+            if ($pythonReady['ok']) {
+                $statusResult = callPython('GET', '/status');
+            }
+        }
+
+        if (!$statusResult['ok']) {
+            http_response_code($statusResult['http_code'] >= 400 ? $statusResult['http_code'] : 500);
+            echo json_encode([
+                'success' => false,
+                'error' => $statusResult['error'] ?? 'Python status check failed',
+                'python_response' => $statusResult['response'] ?? null,
+                'python_raw_response' => $statusResult['raw_response'] ?? null,
+                'python_error' => $statusResult['details'] ?? null,
+            ]);
+            exit();
+        }
+
+        echo json_encode([
+            'success' => true,
+            'status' => $statusResult['response'],
+        ]);
+        exit();
+    }
+
     $result = $conn->query('SELECT schedule_id, schedule_name, schedule_date, team AS car, event AS track, racer, status FROM schedules ORDER BY schedule_date DESC');
     $schedules = $result->fetch_all(MYSQLI_ASSOC);
     echo json_encode(['success' => true, 'schedules' => $schedules]);
@@ -137,6 +306,17 @@ if ($scheduleId === 0 || $participantName === '') {
     echo json_encode([
         'success' => false,
         'error' => 'schedule_id and participant_name are required'
+    ]);
+    exit();
+}
+
+$pythonReady = ensurePythonApiRunning();
+if (!$pythonReady['ok']) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => $pythonReady['error'] ?? 'Could not start Python API',
+        'python_error' => $pythonReady['details'] ?? null,
     ]);
     exit();
 }

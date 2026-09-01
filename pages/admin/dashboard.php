@@ -49,7 +49,11 @@ include __DIR__ . '/../../includes/header.php';
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
     <h2 class="h4 fw-bold text-uppercase mb-0">Dashboard</h2>
-    <a href="schedules/schedule_form.php" class="btn btn-primary">+ New Schedule</a>
+    <div class="d-flex align-items-center gap-2">
+        <span id="rig-status-badge" class="badge bg-secondary">Rig status: checking...</span>
+        <button id="stop-f1-btn" type="button" class="btn btn-outline-danger btn-sm d-none">Stop F1</button>
+        <a href="schedules/schedule_form.php" class="btn btn-primary">+ New Schedule</a>
+    </div>
 </div>
 
 <!-- Schedules -->
@@ -202,33 +206,114 @@ include __DIR__ . '/../../includes/header.php';
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
 <script>
-    document.querySelectorAll('.start-f1-btn').forEach(button => {
+    const startButtons = Array.from(document.querySelectorAll('.start-f1-btn'));
+    const rigStatusBadge = document.getElementById('rig-status-badge');
+    const stopF1Button = document.getElementById('stop-f1-btn');
+    let rigStatusTimer = null;
 
+    function setAllStartButtonsState(disabled, label = 'Start F1') {
+        startButtons.forEach(button => {
+            button.disabled = disabled;
+            button.textContent = label;
+        });
+    }
+
+    function formatStateLabel(status) {
+        const state = (status && status.state) ? String(status.state).toUpperCase() : 'UNKNOWN';
+
+        switch (state) {
+            case 'READY':
+                return 'Rig ready';
+            case 'STARTING':
+                return 'Starting soon';
+            case 'PLAYING':
+                if (typeof status.remaining_seconds === 'number') {
+                    const minutes = Math.floor(status.remaining_seconds / 60);
+                    const seconds = Math.max(0, Math.round(status.remaining_seconds % 60));
+                    return `In progress — ${minutes}:${String(seconds).padStart(2, '0')} remaining`;
+                }
+                return 'In progress';
+            case 'ENDING':
+                return 'Ending session';
+            case 'ERROR':
+                return status && status.error ? status.error : 'Rig error';
+            default:
+                return 'Checking rig status...';
+        }
+    }
+
+    function applyRigStatus(status) {
+        const state = status && typeof status === 'object' ? status : {};
+        const readyState = (state.state || '').toUpperCase();
+        const running = !!state.running;
+        const isBusy = running || readyState === 'STARTING' || readyState === 'PLAYING' || readyState === 'ENDING';
+
+        if (rigStatusBadge) {
+            rigStatusBadge.textContent = `Rig status: ${formatStateLabel(state)}`;
+            rigStatusBadge.className = 'badge ' + (
+                readyState === 'READY' ? 'bg-success' :
+                readyState === 'ERROR' ? 'bg-danger' :
+                'bg-warning text-dark'
+            );
+        }
+
+        if (stopF1Button) {
+            const showStop = ['STARTING', 'PLAYING', 'ENDING'].includes(readyState) || running;
+            stopF1Button.classList.toggle('d-none', !showStop);
+            stopF1Button.disabled = !showStop;
+        }
+
+        if (isBusy) {
+            setAllStartButtonsState(true, 'Start F1');
+            return;
+        }
+
+        setAllStartButtonsState(false, 'Start F1');
+    }
+
+    async function pollRigStatus() {
+        try {
+            const response = await fetch('/api/session.php?action=status', {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                if (rigStatusBadge) {
+                    rigStatusBadge.textContent = `Rig status: ${result.error || 'Unable to reach rig status'}`;
+                    rigStatusBadge.className = 'badge bg-danger';
+                }
+                return;
+            }
+
+            applyRigStatus(result.status || {});
+        } catch (error) {
+            console.error('Rig status poll failed:', error);
+            if (rigStatusBadge) {
+                rigStatusBadge.textContent = 'Rig status: unable to contact rig';
+                rigStatusBadge.className = 'badge bg-danger';
+            }
+        }
+    }
+
+    startButtons.forEach(button => {
         button.addEventListener('click', async function () {
-
             const scheduleId = this.dataset.scheduleId;
             const scheduleName = this.dataset.scheduleName;
-
-            const confirmed = confirm(
-                `Start F1 for "${scheduleName}"?`
-            );
+            const confirmed = confirm(`Start F1 for "${scheduleName}"?`);
 
             if (!confirmed) {
                 return;
             }
 
-            this.disabled = true;
-            this.textContent = 'Starting...';
+            setAllStartButtonsState(true, 'Starting...');
 
             try {
-
                 const response = await fetch('/api/session.php', {
                     method: 'POST',
-
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         api_key: 'changeme123',
                         schedule_id: Number(scheduleId),
@@ -239,41 +324,54 @@ include __DIR__ . '/../../includes/header.php';
                 });
 
                 const result = await response.json();
-
                 console.log('Session response:', result);
 
                 if (!response.ok || !result.success) {
-
-                    alert(
-                        'Failed to start F1.\n\n' +
-                        (result.error || 'Unknown error')
-                    );
-
-                    this.disabled = false;
-                    this.textContent = 'Start F1';
-
+                    alert('Failed to start F1.\n\n' + (result.error || 'Unknown error'));
+                    setAllStartButtonsState(false, 'Start F1');
                     return;
                 }
 
-                alert(
-                    'F1 session started successfully!\n\n' +
-                    'Session ID: ' + result.session_id
-                );
+                alert('F1 session started successfully!\n\nSession ID: ' + result.session_id);
 
-                this.textContent = 'F1 Starting...';
+                if (rigStatusTimer) {
+                    clearInterval(rigStatusTimer);
+                }
 
+                rigStatusTimer = setInterval(pollRigStatus, 2000);
+                await pollRigStatus();
             } catch (error) {
-
                 console.error(error);
-
-                alert(
-                    'Could not connect to the PHP server.'
-                );
-
-                this.disabled = false;
-                this.textContent = 'Start F1';
+                alert('Could not connect to the PHP server.');
+                setAllStartButtonsState(false, 'Start F1');
             }
         });
-
     });
+
+    if (stopF1Button) {
+        stopF1Button.addEventListener('click', async function () {
+            try {
+                const response = await fetch('/api/stop_python.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    alert('Failed to stop F1.\n\n' + (result.error || 'Unknown error'));
+                    return;
+                }
+
+                alert('F1 stop requested.');
+                await pollRigStatus();
+            } catch (error) {
+                console.error(error);
+                alert('Could not contact the rig stop endpoint.');
+            }
+        });
+    }
+
+    pollRigStatus();
+    rigStatusTimer = setInterval(pollRigStatus, 2000);
 </script>
