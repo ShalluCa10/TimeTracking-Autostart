@@ -14,21 +14,32 @@ $conn = getConnection();
 
 function callPython(string $method, string $path, ?array $payload = null): array
 {
-    $ch = curl_init('http://127.0.0.1:5000' . $path);
+    $method = strtoupper($method);
+    $url = 'http://127.0.0.1:5000' . $path;
+    $ch = curl_init($url);
 
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 5,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_CUSTOMREQUEST => $method,
+    ]);
 
-    $headers = ['Content-Type: application/json'];
-
-    if (strtoupper($method) === 'POST') {
-        curl_setopt($ch, CURLOPT_POST, true);
-        if ($payload !== null) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    if ($method === 'POST' && $payload !== null) {
+        $body = json_encode($payload);
+        if ($body === false) {
+            curl_close($ch);
+            return [
+                'ok' => false,
+                'http_code' => 0,
+                'error' => 'Python payload could not be encoded as JSON',
+                'details' => json_last_error_msg(),
+                'response' => null,
+                'raw_response' => null,
+            ];
         }
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
     }
-
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
     $rawResponse = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -52,10 +63,10 @@ function callPython(string $method, string $path, ?array $payload = null): array
         return [
             'ok' => false,
             'http_code' => $httpCode >= 400 ? $httpCode : 500,
-            'error' => 'Python returned an error',
+            'error' => $httpCode >= 400 ? 'Python returned an HTTP error' : 'Python returned invalid JSON',
             'details' => null,
             'raw_response' => $rawResponse,
-            'response' => $decoded,
+            'response' => is_array($decoded) ? $decoded : null,
         ];
     }
 
@@ -151,7 +162,6 @@ function ensurePythonApiRunning(): array
         'details' => null,
     ];
 }
-
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $action = $_GET['action'] ?? 'events';
 
@@ -287,6 +297,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $data = json_decode(file_get_contents('php://input'), true);
 
+if (!is_array($data)) {
+    http_response_code(400);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Request body must be valid JSON'
+    ]);
+    exit();
+}
+
 if (($data['api_key'] ?? '') !== 'changeme123') {
     http_response_code(401);
     echo json_encode([
@@ -380,11 +399,45 @@ $stmt->execute();
 $newId = $stmt->insert_id;
 
 $stmt->close();
-
+$conn->close();
 
 /*
 |--------------------------------------------------------------------------
-| 2. Send session information to Python
+| 2. Check Python status before starting the session
+|--------------------------------------------------------------------------
+*/
+
+$statusResult = callPython('GET', '/status');
+
+if (!$statusResult['ok']) {
+    http_response_code($statusResult['http_code'] >= 400 ? $statusResult['http_code'] : 500);
+    echo json_encode([
+        'success' => false,
+        'session_id' => $newId,
+        'error' => $statusResult['error'] ?? 'Python status check failed',
+        'python_response' => $statusResult['response'] ?? null,
+        'python_raw_response' => $statusResult['raw_response'] ?? null,
+        'python_error' => $statusResult['details'] ?? null,
+    ]);
+    exit();
+}
+
+$status = $statusResult['response'];
+
+if (($status['state'] ?? null) !== 'READY' || !empty($status['running'])) {
+    http_response_code(409);
+    echo json_encode([
+        'success' => false,
+        'session_id' => $newId,
+        'error' => 'Python reports the rig is busy',
+        'python_status' => $status,
+    ]);
+    exit();
+}
+
+/*
+|--------------------------------------------------------------------------
+| 3. Send session information to Python
 |--------------------------------------------------------------------------
 */
 
@@ -394,66 +447,25 @@ $pythonPayload = [
     'participant_name' => $participantName,
     'f1_version' => $f1Version,
     'team' => $car,
-    'track' => $track
+    'track' => $track,
+    'duration_seconds' => 300,
 ];
 
+$startResult = callPython('POST', '/start', $pythonPayload);
 
-$ch = curl_init('http://127.0.0.1:5000/start');
-
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    'Content-Type: application/json'
-]);
-
-curl_setopt(
-    $ch,
-    CURLOPT_POSTFIELDS,
-    json_encode($pythonPayload)
-);
-
-curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-
-
-$pythonResponse = curl_exec($ch);
-
-
-/*
-|--------------------------------------------------------------------------
-| 3. Handle Python connection error
-|--------------------------------------------------------------------------
-*/
-
-if ($pythonResponse === false) {
-
-    $pythonError = curl_error($ch);
-
-    curl_close($ch);
-    $conn->close();
-
-    http_response_code(500);
-
+if (!$startResult['ok']) {
+    http_response_code($startResult['http_code'] >= 400 ? $startResult['http_code'] : 500);
     echo json_encode([
         'success' => false,
         'session_id' => $newId,
-        'error' => 'Session was created, but Python could not be reached',
-        'python_error' => $pythonError
+        'error' => $startResult['error'] ?? 'Python start request failed',
+        'python_status' => $status,
+        'python_response' => $startResult['response'] ?? null,
+        'python_raw_response' => $startResult['raw_response'] ?? null,
+        'python_error' => $startResult['details'] ?? null,
     ]);
-
     exit();
 }
-
-
-$pythonHttpCode = curl_getinfo(
-    $ch,
-    CURLINFO_HTTP_CODE
-);
-
-curl_close($ch);
-
-$conn->close();
-
 
 /*
 |--------------------------------------------------------------------------
@@ -461,27 +473,11 @@ $conn->close();
 |--------------------------------------------------------------------------
 */
 
-$pythonData = json_decode($pythonResponse, true);
-
-if ($pythonHttpCode >= 400) {
-
-    http_response_code($pythonHttpCode);
-
-    echo json_encode([
-        'success' => false,
-        'session_id' => $newId,
-        'error' => 'Python returned an error',
-        'python_response' => $pythonData
-    ]);
-
-    exit();
-}
-
-
 echo json_encode([
     'success' => true,
     'session_id' => $newId,
-    'python' => $pythonData
+    'python' => $startResult['response'],
+    'python_status' => $status,
 ]);
 // if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 //     http_response_code(405);
