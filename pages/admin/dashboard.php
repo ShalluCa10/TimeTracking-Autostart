@@ -202,9 +202,9 @@ include __DIR__ . '/../../includes/header.php';
             </table>
         </div>
     <?php endif; ?>
-</div>
+</div>   
 
-<?php include __DIR__ . '/../includes/footer.php'; ?>
+<?php include __DIR__ . '/../../includes/footer.php'; ?>
 <script>
     const startButtons = Array.from(document.querySelectorAll('.start-f1-btn'));
     const rigStatusBadge = document.getElementById('rig-status-badge');

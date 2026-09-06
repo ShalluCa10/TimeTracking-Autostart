@@ -12,7 +12,7 @@ require_once __DIR__ . '/../config/db.php';
 header('Content-Type: application/json');
 $conn = getConnection();
 
-function callPython(string $method, string $path, ?array $payload = null): array
+function callPython(string $method, string $path, ?array $payload = null, int $timeoutSeconds = 5): array
 {
     $method = strtoupper($method);
     $url = 'http://127.0.0.1:5000' . $path;
@@ -20,7 +20,8 @@ function callPython(string $method, string $path, ?array $payload = null): array
 
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 5,
+        CURLOPT_CONNECTTIMEOUT => max(1, min(2, $timeoutSeconds)),
+        CURLOPT_TIMEOUT => max(1, $timeoutSeconds),
         CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
         CURLOPT_CUSTOMREQUEST => $method,
     ]);
@@ -107,9 +108,13 @@ function startPythonApiProcess(): array
         ];
     }
 
-    $innerCommand = quoteForCmd($pythonExe) . ' ' . quoteForCmd($apiScript)
-        . ' >> ' . quoteForCmd($logFile) . ' 2>&1';
-    $command = 'start "" /B cmd /C ' . quoteForCmd($innerCommand);
+    $command = 'cmd /C start "" /B '
+        . quoteForCmd($pythonExe)
+        . ' '
+        . quoteForCmd($apiScript)
+        . ' >> '
+        . quoteForCmd($logFile)
+        . ' 2>&1';
 
     shell_exec($command);
 
@@ -122,7 +127,7 @@ function startPythonApiProcess(): array
 
 function ensurePythonApiRunning(): array
 {
-    $statusCheck = callPython('GET', '/status');
+    $statusCheck = callPython('GET', '/status', null, 1);
     if ($statusCheck['ok']) {
         return [
             'ok' => true,
@@ -142,9 +147,9 @@ function ensurePythonApiRunning(): array
         ];
     }
 
-    for ($i = 0; $i < 12; $i++) {
-        usleep(500000);
-        $statusCheck = callPython('GET', '/status');
+    for ($i = 0; $i < 8; $i++) {
+        usleep(250000);
+        $statusCheck = callPython('GET', '/status', null, 1);
         if ($statusCheck['ok']) {
             return [
                 'ok' => true,
@@ -255,20 +260,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $statusResult = callPython('GET', '/status');
 
         if (!$statusResult['ok']) {
-            $pythonReady = ensurePythonApiRunning();
-            if ($pythonReady['ok']) {
-                $statusResult = callPython('GET', '/status');
-            }
-        }
-
-        if (!$statusResult['ok']) {
-            http_response_code($statusResult['http_code'] >= 400 ? $statusResult['http_code'] : 500);
+            // Don't auto-start Python on status polling; only report the status.
+            // This prevents duplicate api.py processes from spawning during regular polling.
+            http_response_code(503);
             echo json_encode([
                 'success' => false,
-                'error' => $statusResult['error'] ?? 'Python status check failed',
-                'python_response' => $statusResult['response'] ?? null,
-                'python_raw_response' => $statusResult['raw_response'] ?? null,
-                'python_error' => $statusResult['details'] ?? null,
+                'error' => 'Python service is unavailable',
+                'running' => false,
+                'state' => 'ERROR',
+                'session_id' => null,
+                'remaining_seconds' => 0,
             ]);
             exit();
         }
@@ -342,12 +343,12 @@ if (!$pythonReady['ok']) {
 
 /*
 |--------------------------------------------------------------------------
-| Get team and track from the selected schedule
+| Get team, track, formula and assist from the selected schedule
 |--------------------------------------------------------------------------
 */
 
 $scheduleStmt = $conn->prepare(
-    'SELECT team, event, racer
+    'SELECT team, event, racer, formula, assist
      FROM schedules
      WHERE schedule_id = ?
      LIMIT 1'
@@ -371,6 +372,45 @@ if (!$schedule) {
 
 $car = trim($schedule['team'] ?? '');
 $track = trim($schedule['event'] ?? '');
+$formula = trim($schedule['formula'] ?? '');
+$assist = trim($schedule['assist'] ?? '');
+
+// Validate required automation fields
+if (empty($car)) {
+    http_response_code(400);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Schedule is missing team'
+    ]);
+    exit();
+}
+
+if (empty($track)) {
+    http_response_code(400);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Schedule is missing event/track'
+    ]);
+    exit();
+}
+
+if (empty($formula)) {
+    http_response_code(400);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Schedule is missing formula'
+    ]);
+    exit();
+}
+
+if (empty($assist)) {
+    http_response_code(400);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Schedule is missing assist level'
+    ]);
+    exit();
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -380,15 +420,17 @@ $track = trim($schedule['event'] ?? '');
 
 $stmt = $conn->prepare(
     'INSERT INTO sessions
-    (schedule_id, participant_name, f1_version, team, event, best_lap_time)
-    VALUES (?, ?, ?, ?, ?, ?)'
+    (schedule_id, participant_name, f1_version, formula, assist, team, event, best_lap_time)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
 );
 
 $stmt->bind_param(
-    'isssss',
+    'isssssss',
     $scheduleId,
     $participantName,
     $f1Version,
+    $formula,
+    $assist,
     $car,
     $track,
     $bestLapTime
@@ -446,6 +488,8 @@ $pythonPayload = [
     'schedule_id' => $scheduleId,
     'participant_name' => $participantName,
     'f1_version' => $f1Version,
+    'formula' => $formula,
+    'assist' => $assist,
     'team' => $car,
     'track' => $track,
     'duration_seconds' => 300,

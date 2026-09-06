@@ -17,6 +17,8 @@ $values = [
     'location' => '',
     'notes' => '',
     'version_id' => 0,
+    'formula' => '',
+    'assist' => '',
     'car' => '',
     'track' => '',
     'racer' => '',
@@ -30,7 +32,7 @@ $versions = $conn->query('SELECT id, name FROM game_versions ORDER BY name ASC')
 if ($isEdit) {
     $stmt = $conn->prepare('
         SELECT schedule_id, schedule_name, schedule_date,
-               location, version_id, team AS car, event AS track, racer, notes, created_at, status, timer_minutes
+               location, version_id, formula, assist, team AS car, event AS track, racer, notes, created_at, status, timer_minutes
         FROM schedules WHERE schedule_id = ? LIMIT 1
     ');
     $stmt->bind_param('i', $scheduleId);
@@ -70,6 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $values['location'] = trim($_POST['location'] ?? '');
     $values['notes'] = trim($_POST['notes'] ?? '');
     $values['version_id'] = (int) ($_POST['version_id'] ?? 0);
+    $values['formula'] = trim($_POST['formula'] ?? '');
+    $values['assist'] = trim($_POST['assist'] ?? '');
     $values['car'] = trim($_POST['car'] ?? '');
     $values['track'] = trim($_POST['track'] ?? '');
     $values['racer'] = trim($_POST['racer'] ?? '');
@@ -92,17 +96,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare('
                 UPDATE schedules
                 SET schedule_name = ?, schedule_date = ?, location = ?,
-                    notes = ?, version_id = ?, team = ?, event = ?, racer = ?,
+                    notes = ?, version_id = ?, formula = ?, assist = ?, team = ?, event = ?, racer = ?,
                     status = ?, timer_minutes = ?
                 WHERE schedule_id = ?
             ');
             $stmt->bind_param(
-                'ssssissssii',
+                'sssisssssssii',
                 $values['schedule_name'],
                 $values['schedule_date'],
                 $values['location'],
                 $values['notes'],
                 $values['version_id'],
+                $values['formula'],
+                $values['assist'],
                 $values['car'],
                 $values['track'],
                 $values['racer'],
@@ -112,16 +118,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
         } else {
             $stmt = $conn->prepare('
-                INSERT INTO schedules (schedule_name, schedule_date, location, notes, version_id, team, event, racer, status, timer_minutes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO schedules (schedule_name, schedule_date, location, notes, version_id, formula, assist, team, event, racer, status, timer_minutes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ');
             $stmt->bind_param(
-                'ssssissssi',
+                'sssisssssssi',
                 $values['schedule_name'],
                 $values['schedule_date'],
                 $values['location'],
                 $values['notes'],
                 $values['version_id'],
+                $values['formula'],
+                $values['assist'],
                 $values['car'],
                 $values['track'],
                 $values['racer'],
@@ -226,6 +234,36 @@ function emptyClass(bool $condition): string
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="sel-formula" class="form-label">Formula <span class="text-danger">*</span></label>
+                            <select id="sel-formula" name="formula"
+                                class="form-select <?= emptyClass($values['formula'] === '') ?>"
+                                <?= dis($selectedVersion === 0) ?>>
+                                <option value="" disabled selected>
+                                    <?= $selectedVersion === 0 ? 'Select Version First' : 'Select Formula' ?>
+                                </option>
+                                <option value="F1" <?= sel($values['formula'], 'F1') ?>>F1</option>
+                                <option value="F2" <?= sel($values['formula'], 'F2') ?>>F2</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="sel-assist" class="form-label">Assist Level <span class="text-danger">*</span></label>
+                            <select id="sel-assist" name="assist"
+                                class="form-select <?= emptyClass($values['assist'] === '') ?>"
+                                <?= dis($selectedVersion === 0) ?>>
+                                <option value="" disabled selected>
+                                    <?= $selectedVersion === 0 ? 'Select Version First' : 'Select Assist' ?>
+                                </option>
+                                <option value="Beginner" <?= sel($values['assist'], 'Beginner') ?>>Beginner</option>
+                                <option value="Amateur" <?= sel($values['assist'], 'Amateur') ?>>Amateur</option>
+                                <option value="Experienced" <?= sel($values['assist'], 'Experienced') ?>>Experienced</option>
+                                <option value="Professional" <?= sel($values['assist'], 'Professional') ?>>Professional</option>
+                                <option value="Elite" <?= sel($values['assist'], 'Elite') ?>>Elite</option>
+                                <option value="Event Build" <?= sel($values['assist'], 'Event Build') ?>>Event Build</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
