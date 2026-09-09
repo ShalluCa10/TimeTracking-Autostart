@@ -39,7 +39,7 @@ if (!defined('APP_NAME'))
 
                     <li class="nav-item">
                         <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'simulation.php' ? 'active' : '' ?>"
-                            href="/simulation.php">Controller</a>
+                            href="/pages/simulation.php">Controller</a>
                     </li>
 
                     <li class="nav-item">

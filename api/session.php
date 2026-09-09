@@ -364,6 +364,46 @@ if (($data['api_key'] ?? '') !== 'changeme123') {
     exit();
 }
 
+// ── POST action=complete: Python calls this when a session finishes ──
+if (($data['action'] ?? '') === 'complete') {
+    $completedSessionId = (int) ($data['session_id'] ?? 0);
+
+    if ($completedSessionId === 0) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => 'session_id is required'
+        ]);
+        exit();
+    }
+
+    $completedBestLap = trim($data['best_lap_time'] ?? '');
+
+    if ($completedBestLap !== '') {
+        $completeStmt = $conn->prepare(
+            "UPDATE sessions SET status = 'completed', best_lap_time = ? WHERE session_id = ?"
+        );
+        $completeStmt->bind_param('si', $completedBestLap, $completedSessionId);
+    } else {
+        $completeStmt = $conn->prepare(
+            "UPDATE sessions SET status = 'completed' WHERE session_id = ?"
+        );
+        $completeStmt->bind_param('i', $completedSessionId);
+    }
+
+    $completeStmt->execute();
+    $updated = $completeStmt->affected_rows > 0;
+    $completeStmt->close();
+    $conn->close();
+
+    echo json_encode([
+        'success' => true,
+        'session_id' => $completedSessionId,
+        'updated' => $updated,
+    ]);
+    exit();
+}
+
 $scheduleId = (int) ($data['schedule_id'] ?? 0);
 $participantName = trim($data['participant_name'] ?? '');
 $f1Version = trim($data['f1_version'] ?? '');
