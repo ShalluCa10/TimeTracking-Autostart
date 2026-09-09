@@ -153,7 +153,7 @@ include __DIR__ . '/../../../includes/header.php';
                         <div class="mb-3">
                             <label for="schedule_id" class="form-label">Schedule</label>
                             <select id="schedule_id" name="schedule_id" class="form-select" required onchange="window.location.href='session_form.php?schedule_id=' + this.value">
-                                <option value="">— Select Schedule —</option>
+                                <option value="">- Select Schedule -</option>
                                 <?php foreach ($schedules as $sc): ?>
                                     <option value="<?= $sc['schedule_id'] ?>" <?= $sc['schedule_id'] == $scheduleId ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($sc['schedule_name']) ?>
@@ -164,7 +164,7 @@ include __DIR__ . '/../../../includes/header.php';
                     <?php else: ?>
                         <div class="mb-3">
                             <label class="form-label">Schedule</label>
-                            <div class="form-control-plaintext fw-semibold"><?= htmlspecialchars($schedule['schedule_name'] ?? '—') ?></div>
+                            <div class="form-control-plaintext fw-semibold"><?= htmlspecialchars($schedule['schedule_name'] ?? '-') ?></div>
                         </div>
                         <input type="hidden" name="schedule_id" value="<?= $scheduleId ?>">
                     <?php endif; ?>
@@ -178,7 +178,7 @@ include __DIR__ . '/../../../includes/header.php';
                         <div class="mb-3">
                             <label for="sel-version" class="form-label">Game Version</label>
                             <select id="sel-version" name="f1_version" class="form-select" required>
-                                <option value="">— Select Version —</option>
+                                <option value="">- Select Version -</option>
                                 <?php foreach ($versions as $v): ?>
                                     <option value="<?= htmlspecialchars($v['name']) ?>" data-id="<?= $v['id'] ?>" <?= $v['name'] === $f1Version ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($v['name']) ?>
@@ -190,7 +190,7 @@ include __DIR__ . '/../../../includes/header.php';
                         <div class="mb-3">
                             <label for="sel-track" class="form-label">Event</label>
                             <select id="sel-track" name="track" class="form-select" <?= $selectedVersion === 0 ? 'disabled' : '' ?>>
-                                <option value="">— Select Version First —</option>
+                                <option value="">- Select Version First -</option>
                                 <?php foreach ($tracks as $t): ?>
                                     <option value="<?= htmlspecialchars($t['name']) ?>" <?= $t['name'] === $track ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($t['name']) ?>
@@ -202,7 +202,7 @@ include __DIR__ . '/../../../includes/header.php';
                         <div class="mb-3">
                             <label for="sel-car" class="form-label">Team</label>
                             <select id="sel-car" name="car" class="form-select" <?= $selectedVersion === 0 ? 'disabled' : '' ?>>
-                                <option value="">— Select Version First —</option>
+                                <option value="">- Select Version First -</option>
                                 <?php foreach ($cars as $c): ?>
                                     <option value="<?= htmlspecialchars($c['name']) ?>" <?= $c['name'] === $car ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($c['name']) ?>
@@ -219,19 +219,19 @@ include __DIR__ . '/../../../includes/header.php';
                     <?php else: ?>
                         <div class="mb-3">
                             <label class="form-label">Game Version</label>
-                            <div class="form-control-plaintext fw-semibold"><?= htmlspecialchars($f1Version ?: '—') ?></div>
+                            <div class="form-control-plaintext fw-semibold"><?= htmlspecialchars($f1Version ?: '-') ?></div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Event</label>
-                            <div class="form-control-plaintext fw-semibold"><?= htmlspecialchars($track ?: '—') ?></div>
+                            <div class="form-control-plaintext fw-semibold"><?= htmlspecialchars($track ?: '-') ?></div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Team</label>
-                            <div class="form-control-plaintext fw-semibold"><?= htmlspecialchars($car ?: '—') ?></div>
+                            <div class="form-control-plaintext fw-semibold"><?= htmlspecialchars($car ?: '-') ?></div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Best Lap Time</label>
-                            <div class="form-control-plaintext fw-semibold"><?= htmlspecialchars($bestLapTime ?: '—') ?></div>
+                            <div class="form-control-plaintext fw-semibold"><?= htmlspecialchars($bestLapTime ?: '-') ?></div>
                         </div>
                     <?php endif; ?>
 
@@ -273,16 +273,16 @@ include __DIR__ . '/../../../includes/header.php';
         }
 
         async function loadOptions(versionId) {
-            resetSelect(selTrack, '— Loading... —');
-            resetSelect(selCar, '— Loading... —');
+            resetSelect(selTrack, '- Loading... -');
+            resetSelect(selCar, '- Loading... -');
 
             const [tracks, cars] = await Promise.all([
                 fetch(`/api/get_options.php?type=tracks&version_id=${versionId}`).then(r => r.json()),
                 fetch(`/api/get_options.php?type=cars&version_id=${versionId}`).then(r => r.json()),
             ]);
 
-            populate(selTrack, tracks, savedTrack, tracks.length ? '— Select Schedule —' : '— No schedules —');
-            populate(selCar, cars, savedCar, cars.length ? '— Select Team —' : '— No teams —');
+            populate(selTrack, tracks, savedTrack, tracks.length ? '- Select Schedule -' : '- No schedules -');
+            populate(selCar, cars, savedCar, cars.length ? '- Select Team -' : '- No teams -');
         }
 
         selVersion.addEventListener('change', function () {
@@ -291,8 +291,8 @@ include __DIR__ . '/../../../includes/header.php';
             if (versionId) {
                 loadOptions(versionId);
             } else {
-                resetSelect(selTrack, '— Select Version First —');
-                resetSelect(selCar, '— Select Version First —');
+                resetSelect(selTrack, '- Select Version First -');
+                resetSelect(selCar, '- Select Version First -');
             }
         });
 

@@ -45,7 +45,7 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leaderboard — F1 Lap Simulator</title>
+    <title>Leaderboard - F1 Lap Simulator</title>
     <link rel="stylesheet" href="/assets/css/style.css">
     <style>
         .leaderboard-container {
@@ -105,7 +105,7 @@ $conn->close();
     <div class="results-container leaderboard-container">
         <div class="results-header">
             <h1>Leaderboard</h1>
-            <p class="session-label">Best lap across sessions<?= $schedule_id ? ' — filtered by schedule' : '' ?></p>
+            <p class="session-label">Best lap across sessions<?= $schedule_id ? ' - filtered by schedule' : '' ?></p>
         </div>
 
         <div class="filter-row">

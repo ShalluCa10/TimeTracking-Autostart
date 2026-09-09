@@ -56,7 +56,7 @@ include __DIR__ . '/../includes/public_header.php';
                 <div class="sim-pre__group">
                     <label for="sel-schedule">SELECT SCHEDULE</label>
                     <select id="sel-schedule">
-                        <option value="">— Select Schedule —</option>
+                        <option value="">- Select Schedule -</option>
                         <?php foreach ($schedules as $sc): ?>
                             <option value="<?= $sc['schedule_id'] ?>" data-car="<?= htmlspecialchars($sc['car'] ?? '') ?>"
                                 data-track="<?= htmlspecialchars($sc['track'] ?? '') ?>"
@@ -70,9 +70,9 @@ include __DIR__ . '/../includes/public_header.php';
 
                 <!-- Schedule preview -->
                 <div id="schedule-preview" class="sim-pre__preview" style="display:none;">
-                    <div class="sim-pre__detail"><span>Team</span> <strong id="prev-car">—</strong></div>
-                    <div class="sim-pre__detail"><span>Event</span> <strong id="prev-track">—</strong></div>
-                    <div class="sim-pre__detail"><span>Participant</span> <strong id="prev-racer">—</strong></div>
+                    <div class="sim-pre__detail"><span>Team</span> <strong id="prev-car">-</strong></div>
+                    <div class="sim-pre__detail"><span>Event</span> <strong id="prev-track">-</strong></div>
+                    <div class="sim-pre__detail"><span>Participant</span> <strong id="prev-racer">-</strong></div>
                 </div>
 
                 <p id="selector-status" style="font-size:0.8rem; min-height:1.2em; color:#8888aa; margin-bottom:0;"></p>
@@ -83,6 +83,7 @@ include __DIR__ . '/../includes/public_header.php';
     <?php endif; ?>
 
     <!-- ── Track ── -->
+    <!--
     <div class="track-line-wrapper">
         <span class="flag start">START</span>
         <span class="flag finish">FINISH</span>
@@ -91,6 +92,7 @@ include __DIR__ . '/../includes/public_header.php';
             <div id="car-dot"></div>
         </div>
     </div>
+    -->
 
     <!-- ── Timer ── -->
     <div class="timer-display" id="timerDisplay"
@@ -114,7 +116,7 @@ include __DIR__ . '/../includes/public_header.php';
     <!-- ── Mimic ── -->
     <div id="mimicry-overlay" style="display:none;">
         <div class="mimicry-box">
-            <div class="mimicry-title">⚙ INITIALIZING SESSION</div>
+            <div class="mimicry-title">INITIALIZING SESSION</div>
 
             <div class="mimicry-row" id="mim-racer">
                 <span class="mimicry-label">PARTICIPANT</span>
@@ -165,9 +167,9 @@ include __DIR__ . '/../includes/public_header.php';
                 return;
             }
 
-            prevCar.textContent = opt.dataset.car || '—';
-            prevTrack.textContent = opt.dataset.track || '—';
-            prevRacer.textContent = opt.dataset.racer || '—';
+            prevCar.textContent = opt.dataset.car || '-';
+            prevTrack.textContent = opt.dataset.track || '-';
+            prevRacer.textContent = opt.dataset.racer || '-';
             preview.style.display = 'block';
 
             btn.disabled = true;
@@ -183,7 +185,7 @@ include __DIR__ . '/../includes/public_header.php';
 
                 if (data.session_id) {
                     history.replaceState(null, '', '?session_id=' + data.session_id);
-                    status.textContent = '✅ Session #' + data.session_id + ' ready — press START';
+                    status.textContent = 'Session #' + data.session_id + ' ready - press START';
                     if (simSubtitle) {
                         simSubtitle.innerHTML =
                             'Session #' + data.session_id +
@@ -195,15 +197,15 @@ include __DIR__ . '/../includes/public_header.php';
                     }
                     btn.disabled = false;
                 } else {
-                    status.textContent = '❌ ' + (data.error ?? 'Could not create session.');
+                    status.textContent = (data.error ?? 'Could not create session.');
                 }
             } catch (e) {
-                status.textContent = '❌ Network error.';
+                status.textContent = 'Network error.';
             }
         });
     })();
 </script>
 
-<script src="/assets/js/simulation.js"></script>
+<!-- <script src="/assets/js/simulation.js"></script> -->
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

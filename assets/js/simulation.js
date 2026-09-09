@@ -8,7 +8,7 @@ let currentLap = 0;
 let lapTimes = [];
 let sessionTimerMs = null;
 
-const carDot = document.getElementById('car-dot');
+// const carDot = document.getElementById('car-dot'); // track-line dot disabled
 const timerDisplay = document.getElementById('timerDisplay');
 const lapDisplay = document.getElementById('lapCounter');
 const lapList = document.getElementById('lapList');
@@ -23,10 +23,10 @@ function formatTime(ms) {
     return String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
 }
 
-function getTrackWidth() {
-    const track = document.getElementById('trackLine');
-    return track ? track.offsetWidth : 500;
-}
+// function getTrackWidth() {
+//     const track = document.getElementById('trackLine');
+//     return track ? track.offsetWidth : 500;
+// }
 
 function renderLaps() {
     if (!lapList) return;
@@ -61,7 +61,7 @@ function recordLap() {
     lapDisplay.textContent = 'LAP ' + currentLap;
     renderLaps();
 
-    if (carDot) carDot.style.left = '0px';
+    // if (carDot) carDot.style.left = '0px'; // track-line dot disabled
 }
 
 function animate(timestamp) {
@@ -81,11 +81,11 @@ function animate(timestamp) {
         timerDisplay.textContent = formatTime(sessionElapsed);
     }
 
-    const lapElapsed = performance.now() - lapStart;
-    const progress = Math.min(lapElapsed / LAP_DURATION_MS, 1);
-    const trackWidth = getTrackWidth();
+    // const lapElapsed = performance.now() - lapStart;
+    // const progress = Math.min(lapElapsed / LAP_DURATION_MS, 1);
+    // const trackWidth = getTrackWidth();
 
-    if (carDot) carDot.style.left = (progress * trackWidth) + 'px';
+    // if (carDot) carDot.style.left = (progress * trackWidth) + 'px'; // track-line dot disabled
 
     animFrame = requestAnimationFrame(animate);
 }
@@ -110,9 +110,9 @@ function runMimicry(config) {
         overlay.style.display = 'flex';
 
         const steps = [
-            { key: 'racer', count: config.racerIdx ?? 3, label: config.racer ?? '—' },
-            { key: 'track', count: config.trackIdx ?? 5, label: config.track ?? '—' },
-            { key: 'car', count: config.carIdx ?? 2, label: config.car ?? '—' },
+            { key: 'racer', count: config.racerIdx ?? 3, label: config.racer ?? '-' },
+            { key: 'track', count: config.trackIdx ?? 5, label: config.track ?? '-' },
+            { key: 'car', count: config.carIdx ?? 2, label: config.car ?? '-' },
         ];
 
         const ARROW_DELAY = 180;
@@ -141,7 +141,7 @@ function runMimicry(config) {
             totalDelay += step.count * ARROW_DELAY + CONFIRM_WAIT;
 
             setTimeout(() => {
-                confirm.textContent = '✓ ' + step.label;
+                confirm.textContent = step.label;
                 confirm.classList.add('show');
                 row.classList.remove('active');
                 row.classList.add('done');
@@ -174,7 +174,7 @@ btnStart.addEventListener('click', async function () {
         racer: opt?.dataset.racer ?? 'Racer',
         track: opt?.dataset.track ?? 'Track',
         car: opt?.dataset.car ?? 'Car',
-        racerIdx: 3,  // placeholder — wire to menu_index later
+        racerIdx: 3,  // placeholder - wire to menu_index later
         trackIdx: 5,
         carIdx: 2,
     });

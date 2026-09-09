@@ -59,6 +59,9 @@ if (!defined('APP_NAME'))  define('APP_NAME', 'F1 Lap Simulator');
                     <span class="nav-link disabled">Hi, <?= htmlspecialchars($_SESSION['admin_username'] ?? '') ?></span>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'change_password.php' ? 'active' : '' ?>" href="/pages/admin/change_password.php">Change Password</a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link" href="/pages/logout.php">Logout</a>
                 </li>
             </ul>

@@ -233,7 +233,7 @@ include __DIR__ . '/../../../includes/header.php';
                                             <input type="hidden" name="action" value="delete_item">
                                             <input type="hidden" name="item_id" value="<?= $item['id'] ?>">
                                             <input type="hidden" name="item_table" value="<?= $panel['table'] ?>">
-                                            <button type="submit" class="btn-icon" title="Delete">✕</button>
+                                            <button type="submit" class="btn-icon" title="Delete"></button>
                                         </form>
                                     </div>
 
@@ -249,7 +249,7 @@ include __DIR__ . '/../../../includes/header.php';
                                             </div>
                                         <?php endif; ?>
                                         <label class="item-photo-btn" title="Upload photo"
-                                            for="upload-<?= $panel['table'] ?>-<?= $item['id'] ?>">✎</label>
+                                            for="upload-<?= $panel['table'] ?>-<?= $item['id'] ?>"></label>
                                         <input type="file" id="upload-<?= $panel['table'] ?>-<?= $item['id'] ?>"
                                             class="item-upload-input" accept="image/*" data-table="<?= $panel['table'] ?>"
                                             data-id="<?= $item['id'] ?>" style="display:none;">
@@ -443,7 +443,7 @@ include __DIR__ . '/../../../includes/header.php';
         color: #0057ff;
     }
 
-    /* Hover overlay — pencil icon */
+    /* Hover overlay - pencil icon */
     .item-photo-btn {
         position: absolute;
         inset: 0;
@@ -611,7 +611,7 @@ include __DIR__ . '/../../../includes/header.php';
                                  id="${thumbId}"
                                  alt="">
                             <label class="item-photo-btn" title="Upload photo"
-                                   for="upload-${table}-${id}">✎</label>
+                                   for="upload-${table}-${id}"></label>
                             <input type="file"
                                    id="upload-${table}-${id}"
                                    class="item-upload-input"
