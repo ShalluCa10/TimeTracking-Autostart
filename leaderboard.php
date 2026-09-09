@@ -151,5 +151,14 @@ $conn->close();
             </table>
         <?php endif; ?>
     </div>
+    <script>
+        // Auto-refresh leaderboard every 5 seconds so live session finishes appear automatically
+        setInterval(function() {
+            // Only auto-refresh if user hasn't opened dropdown/interacting
+            if (!document.hidden) {
+                window.location.reload();
+            }
+        }, 5000);
+    </script>
 </body>
 </html>

@@ -99,7 +99,7 @@ function ensureGameTables($conn)
     }
 }
 
-// ── Session Timer Column Bootstrap ───────────────────────────────────────────
+// ── Session Timer & Status Column Bootstrap ───────────────────────────────────
 
 function ensureScheduleTimerColumn($conn)
 {
@@ -113,5 +113,8 @@ function ensureScheduleTimerColumn($conn)
     }
     if (!$columnExists('sessions', 'timer_minutes')) {
         $conn->query('ALTER TABLE `sessions` ADD COLUMN `timer_minutes` INT DEFAULT NULL AFTER `best_lap_time`');
+    }
+    if (!$columnExists('sessions', 'status')) {
+        $conn->query("ALTER TABLE `sessions` ADD COLUMN `status` ENUM('scheduled', 'starting', 'running', 'completed', 'failed', 'cancelled') NOT NULL DEFAULT 'running' AFTER `timer_minutes`");
     }
 }

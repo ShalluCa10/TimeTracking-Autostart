@@ -52,8 +52,16 @@ include __DIR__ . '/../../includes/header.php';
     <div class="d-flex align-items-center gap-2">
         <span id="rig-status-badge" class="badge bg-secondary">Rig status: checking...</span>
         <button id="stop-f1-btn" type="button" class="btn btn-outline-danger btn-sm d-none">Stop F1</button>
+        <a href="/leaderboard.php" class="btn btn-outline-primary btn-sm">Leaderboard</a>
         <a href="schedules/schedule_form.php" class="btn btn-primary">+ New Schedule</a>
     </div>
+</div>
+
+<div id="session-completed-banner" class="alert alert-success d-none mb-4 d-flex justify-content-between align-items-center">
+    <div>
+        <strong id="completed-session-text">Session completed!</strong> Results are saved and ready to view.
+    </div>
+    <a id="view-leaderboard-btn" href="/leaderboard.php" class="btn btn-sm btn-success">View Leaderboard</a>
 </div>
 
 <!-- Schedules -->
@@ -209,6 +217,11 @@ include __DIR__ . '/../../includes/header.php';
     const startButtons = Array.from(document.querySelectorAll('.start-f1-btn'));
     const rigStatusBadge = document.getElementById('rig-status-badge');
     const stopF1Button = document.getElementById('stop-f1-btn');
+    const sessionCompletedBanner = document.getElementById('session-completed-banner');
+    const completedSessionText = document.getElementById('completed-session-text');
+    const viewLeaderboardBtn = document.getElementById('view-leaderboard-btn');
+    let lastKnownCompletedId = null;
+    let previousState = null;
     let rigStatusTimer = null;
 
     function setAllStartButtonsState(disabled, label = 'Start F1') {
@@ -223,7 +236,7 @@ include __DIR__ . '/../../includes/header.php';
 
         switch (state) {
             case 'READY':
-                return 'Rig ready';
+                return 'Rig ready — Waiting for session';
             case 'STARTING':
                 return 'Starting soon';
             case 'PLAYING':
@@ -234,7 +247,7 @@ include __DIR__ . '/../../includes/header.php';
                 }
                 return 'In progress';
             case 'ENDING':
-                return 'Ending session';
+                return 'Ending session & saving results';
             case 'ERROR':
                 return status && status.error ? status.error : 'Rig error';
             default:
@@ -262,6 +275,22 @@ include __DIR__ . '/../../includes/header.php';
             stopF1Button.classList.toggle('d-none', !showStop);
             stopF1Button.disabled = !showStop;
         }
+
+        // Handle completed session notification
+        if (state.last_completed_session_id && state.last_completed_session_id !== lastKnownCompletedId) {
+            lastKnownCompletedId = state.last_completed_session_id;
+            if (sessionCompletedBanner) {
+                completedSessionText.textContent = `Session #${lastKnownCompletedId} completed!`;
+                if (state.schedule_id) {
+                    viewLeaderboardBtn.href = `/leaderboard.php?schedule_id=${state.schedule_id}`;
+                } else {
+                    viewLeaderboardBtn.href = '/leaderboard.php';
+                }
+                sessionCompletedBanner.classList.remove('d-none');
+            }
+        }
+
+        previousState = readyState;
 
         if (isBusy) {
             setAllStartButtonsState(true, 'Start F1');

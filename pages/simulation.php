@@ -201,6 +201,46 @@ include __DIR__ . '/../includes/public_header.php';
                 status.textContent = '❌ Network error.';
             }
         });
+
+        // Auto-detect live background session and transition to leaderboard on completion
+        let lastLiveSessionId = null;
+        let wasRunning = false;
+
+        async function pollLiveSession() {
+            try {
+                const res = await fetch('/api/session.php?action=status');
+                const data = await res.json();
+                if (!res.ok || !data.success) return;
+
+                const st = data.status || {};
+                const state = (st.state || '').toUpperCase();
+                const running = !!st.running;
+
+                if (running && (state === 'STARTING' || state === 'PLAYING')) {
+                    wasRunning = true;
+                    if (st.session_id) lastLiveSessionId = st.session_id;
+                    const timerDisplayEl = document.getElementById('timerDisplay');
+                    if (timerDisplayEl && typeof st.remaining_seconds === 'number') {
+                        const mins = Math.floor(st.remaining_seconds / 60);
+                        const secs = Math.max(0, Math.round(st.remaining_seconds % 60));
+                        timerDisplayEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                    }
+                    if (status) {
+                        status.textContent = `▶ Session #${st.session_id || ''} in progress...`;
+                    }
+                } else if (wasRunning && (state === 'READY' || state === 'COMPLETED')) {
+                    wasRunning = false;
+                    if (status) status.textContent = '🏁 Session completed! Showing leaderboard...';
+                    setTimeout(() => {
+                        window.location.href = '/leaderboard.php' + (st.schedule_id ? '?schedule_id=' + st.schedule_id : '');
+                    }, 1500);
+                }
+            } catch (err) {
+                // Ignore network errors in poller
+            }
+        }
+
+        setInterval(pollLiveSession, 2000);
     })();
 </script>
 

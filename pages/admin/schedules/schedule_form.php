@@ -340,10 +340,40 @@ function emptyClass(bool $condition): string
         const selTrack = document.getElementById('sel-track');
         const selCar = document.getElementById('sel-car');
         const selRacer = document.getElementById('racer');
+        const selFormula = document.getElementById('sel-formula');
+        const selAssist = document.getElementById('sel-assist');
         const savedTrack = <?= json_encode($values['track']) ?>;
         const savedCar = <?= json_encode($values['car']) ?>;
         const savedRacer = <?= json_encode($values['racer']) ?>;
+        const savedFormula = <?= json_encode($values['formula']) ?>;
+        const savedAssist = <?= json_encode($values['assist']) ?>;
         const API_URL = '/api/get_options.php';
+
+        // Shared by create and edit: enables/populates Formula + Assist once a version is chosen.
+        function updateScheduleOptionsForVersion(versionId, selectedFormula = '', selectedAssist = '') {
+            const hasVersion = !!versionId;
+
+            [selFormula, selAssist].forEach(el => {
+                el.disabled = !hasVersion;
+                const placeholder = el.querySelector('option[value=""]');
+                if (placeholder) {
+                    placeholder.textContent = hasVersion
+                        ? `Select ${el === selFormula ? 'Formula' : 'Assist'}`
+                        : 'Select Version First';
+                }
+            });
+
+            if (hasVersion) {
+                if (selectedFormula) selFormula.value = selectedFormula;
+                if (selectedAssist) selAssist.value = selectedAssist;
+            } else {
+                selFormula.value = '';
+                selAssist.value = '';
+            }
+
+            selFormula.classList.toggle('empty', selFormula.value === '');
+            selAssist.classList.toggle('empty', selAssist.value === '');
+        }
 
         function resetSelect(el, placeholder) {
             el.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
@@ -393,6 +423,7 @@ function emptyClass(bool $condition): string
                 resetSelect(selTrack, 'Select Version First');
                 resetSelect(selCar, 'Select Version First');
             }
+            updateScheduleOptionsForVersion(this.value);
         });
 
         [selTrack, selCar].forEach(el => {
@@ -400,6 +431,8 @@ function emptyClass(bool $condition): string
                 this.classList.toggle('empty', this.value === '');
             });
         });
+
+        updateScheduleOptionsForVersion(selVersion.value, savedFormula, savedAssist);
 
         if (selVersion.value) {
             loadOptions(selVersion.value, savedTrack, savedCar, savedRacer);
