@@ -51,8 +51,8 @@ if (!empty($laps)) {
     <div class="results-container">
 
         <div class="results-header">
-            <h1>🏁 Session Results</h1>
-            <p class="session-label">Session #<?= $session_id ?> &mdash;
+            <h1>Session Results</h1>
+            <p class="session-label">Session #<?= $session_id ?> -
                 <?= $session ? htmlspecialchars($session['schedule_name'] ?? 'Unknown Schedule') : 'Unknown Schedule' ?>
             </p>
         </div>
@@ -63,7 +63,7 @@ if (!empty($laps)) {
 
             <!-- Best Lap Banner -->
             <div class="best-lap-banner">
-                <span class="best-label">⚡ Best Lap</span>
+                <span class="best-label">Best Lap</span>
                 <span class="best-time"><?= htmlspecialchars($bestLap['lap_time']) ?></span>
                 <span class="best-lap-num">Lap <?= $bestLap['lap_number'] ?></span>
             </div>
@@ -82,7 +82,7 @@ if (!empty($laps)) {
                         <?php
                         $isBest = $lap['id'] === $bestLap['id'];
                         $gapMs = $lap['lap_time_ms'] - $bestLap['lap_time_ms'];
-                        $gap = $isBest ? '—' : '+' . number_format($gapMs / 1000, 3) . 's';
+                        $gap = $isBest ? '-' : '+' . number_format($gapMs / 1000, 3) . 's';
                         ?>
                         <tr class="<?= $isBest ? 'best-row' : '' ?>">
                             <td>Lap <?= $lap['lap_number'] ?></td>

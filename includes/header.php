@@ -1,70 +1,87 @@
 <?php
-if (!defined('BASE_URL'))  define('BASE_URL', '');
-if (!defined('APP_NAME'))  define('APP_NAME', 'F1 Lap Simulator');
+if (!defined('BASE_URL'))
+    define('BASE_URL', '');
+if (!defined('APP_NAME'))
+    define('APP_NAME', 'F1 Lap Simulator');
 ?>
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= ($pageTitle ?? 'Dashboard') . ' - ' . APP_NAME ?></title>
 
 
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
-          rel="stylesheet"
-          integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
-          crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
 
     <!-- overrides Bootstrap -->
     <link rel="stylesheet" href="/assets/css/style.css">
 </head>
+
 <body>
-   <nav class="navbar navbar-expand-lg">
-    <div class="container-fluid px-4">
-        <a class="navbar-brand" href="/pages/admin/dashboard.php"><?= APP_NAME ?></a>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="/pages/admin/dashboard.php"><?= APP_NAME ?></a>
 
-        <button class="navbar-toggler" type="button"
-                data-bs-toggle="collapse" data-bs-target="#mainNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-        <div class="collapse navbar-collapse" id="mainNav">
-            <!-- Center links -->
-            <ul class="navbar-nav mx-auto">
-                <li class="nav-item">
-                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'dashboard.php'     ? 'active' : '' ?>" href="/pages/admin/dashboard.php">Dashboard</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'manage_schedules.php' ? 'active' : '' ?>" href="/pages/admin/schedules/manage_schedules.php">Manage Schedules</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'sessions.php'      ? 'active' : '' ?>" href="/pages/admin/sessions/sessions.php">Manage Sessions</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'simulation.php'    ? 'active' : '' ?>" href="/simulation.php">Simulator</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'leaderboard.php'   ? 'active' : '' ?>" href="/leaderboard.php">Leaderboard</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'manage_games.php'  ? 'active' : '' ?>" href="/pages/admin/games/manage_games.php">Manage Games</a>
-                </li>
-            </ul>
+            <div class="collapse navbar-collapse" id="mainNav">
+                <!-- Center links -->
+                <ul class="navbar-nav mx-auto">
 
-            <!-- Right: Hi + Logout -->
-            <ul class="navbar-nav ms-auto align-items-center">
-                <li class="nav-item">
-                    <span class="nav-link disabled">Hi, <?= htmlspecialchars($_SESSION['admin_username'] ?? '') ?></span>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/pages/logout.php">Logout</a>
-                </li>
-            </ul>
+                    <li class="nav-item">
+                        <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'simulation.php' ? 'active' : '' ?>"
+                            href="/simulation.php">Controller</a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'dashboard.php' ? 'active' : '' ?>"
+                            href="/pages/admin/dashboard.php">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'manage_schedules.php' ? 'active' : '' ?>"
+                            href="/pages/admin/schedules/manage_schedules.php">Schedules</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'sessions.php' ? 'active' : '' ?>"
+                            href="/pages/admin/sessions/sessions.php">Sessions</a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'leaderboard.php' ? 'active' : '' ?>"
+                            href="/leaderboard.php">Leaderboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'manage_games.php' ? 'active' : '' ?>"
+                            href="/pages/admin/games/manage_games.php">Games</a>
+                    </li>
+                </ul>
+
+                <!-- Right: Hi + Logout -->
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item">
+                        <span class="nav-link disabled">Hi,
+                            <?= htmlspecialchars($_SESSION['username'] ?? '') ?></span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'change_password.php' ? 'active' : '' ?>"
+                            href="/pages/admin/change_password.php">Change Password</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/pages/logout.php">Logout</a>
+                    </li>
+                </ul>
+            </div>
         </div>
-    </div>
-</nav>
+    </nav>
 
 
     <main class="container-fluid py-4 px-4">

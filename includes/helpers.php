@@ -1,5 +1,76 @@
 <?php
 
+// ── Python Rig Bridge ─────────────────────────────────────────────────────────
+
+function callPython(string $method, string $path, ?array $payload = null, int $timeoutSeconds = 5): array
+{
+    $method = strtoupper($method);
+    $url = 'http://127.0.0.1:5000' . $path;
+    $ch = curl_init($url);
+
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => max(1, min(2, $timeoutSeconds)),
+        CURLOPT_TIMEOUT => max(1, $timeoutSeconds),
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_CUSTOMREQUEST => $method,
+    ]);
+
+    if ($method === 'POST' && $payload !== null) {
+        $body = json_encode($payload);
+        if ($body === false) {
+            curl_close($ch);
+            return [
+                'ok' => false,
+                'http_code' => 0,
+                'error' => 'Python payload could not be encoded as JSON',
+                'details' => json_last_error_msg(),
+                'response' => null,
+                'raw_response' => null,
+            ];
+        }
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+    }
+
+    $rawResponse = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($rawResponse === false) {
+        return [
+            'ok' => false,
+            'http_code' => 500,
+            'error' => 'Python could not be reached',
+            'details' => $curlError !== '' ? $curlError : 'cURL request failed',
+            'raw_response' => null,
+            'response' => null,
+        ];
+    }
+
+    $decoded = json_decode($rawResponse, true);
+
+    if ($httpCode >= 400 || !is_array($decoded)) {
+        return [
+            'ok' => false,
+            'http_code' => $httpCode >= 400 ? $httpCode : 500,
+            'error' => $httpCode >= 400 ? 'Python returned an HTTP error' : 'Python returned invalid JSON',
+            'details' => null,
+            'raw_response' => $rawResponse,
+            'response' => is_array($decoded) ? $decoded : null,
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'http_code' => $httpCode,
+        'error' => null,
+        'details' => null,
+        'raw_response' => $rawResponse,
+        'response' => $decoded,
+    ];
+}
+
 // ── Flash ─────────────────────────────────────────────────────────────────────
 
 function setFlash(string $type, string $message): void

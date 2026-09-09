@@ -213,6 +213,7 @@ include __DIR__ . '/../../includes/header.php';
 </div>   
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
+
 <script>
     const startButtons = Array.from(document.querySelectorAll('.start-f1-btn'));
     const rigStatusBadge = document.getElementById('rig-status-badge');
@@ -220,6 +221,7 @@ include __DIR__ . '/../../includes/header.php';
     const sessionCompletedBanner = document.getElementById('session-completed-banner');
     const completedSessionText = document.getElementById('completed-session-text');
     const viewLeaderboardBtn = document.getElementById('view-leaderboard-btn');
+
     let lastKnownCompletedId = null;
     let previousState = null;
     let rigStatusTimer = null;
@@ -232,60 +234,96 @@ include __DIR__ . '/../../includes/header.php';
     }
 
     function formatStateLabel(status) {
-        const state = (status && status.state) ? String(status.state).toUpperCase() : 'UNKNOWN';
+        const state = status && status.state
+            ? String(status.state).toUpperCase()
+            : 'UNKNOWN';
 
         switch (state) {
             case 'READY':
                 return 'Rig ready — Waiting for session';
+
             case 'STARTING':
                 return 'Starting soon';
+
             case 'PLAYING':
                 if (typeof status.remaining_seconds === 'number') {
                     const minutes = Math.floor(status.remaining_seconds / 60);
-                    const seconds = Math.max(0, Math.round(status.remaining_seconds % 60));
+                    const seconds = Math.max(
+                        0,
+                        Math.round(status.remaining_seconds % 60)
+                    );
+
                     return `In progress — ${minutes}:${String(seconds).padStart(2, '0')} remaining`;
                 }
+
                 return 'In progress';
+
             case 'ENDING':
                 return 'Ending session & saving results';
+
             case 'ERROR':
-                return status && status.error ? status.error : 'Rig error';
+                return status && status.error
+                    ? status.error
+                    : 'Rig error';
+
             default:
                 return 'Checking rig status...';
         }
     }
 
     function applyRigStatus(status) {
-        const state = status && typeof status === 'object' ? status : {};
+        const state = status && typeof status === 'object'
+            ? status
+            : {};
+
         const readyState = (state.state || '').toUpperCase();
         const running = !!state.running;
-        const isBusy = running || readyState === 'STARTING' || readyState === 'PLAYING' || readyState === 'ENDING';
+
+        const isBusy =
+            running ||
+            readyState === 'STARTING' ||
+            readyState === 'PLAYING' ||
+            readyState === 'ENDING';
 
         if (rigStatusBadge) {
-            rigStatusBadge.textContent = `Rig status: ${formatStateLabel(state)}`;
+            rigStatusBadge.textContent =
+                `Rig status: ${formatStateLabel(state)}`;
+
             rigStatusBadge.className = 'badge ' + (
-                readyState === 'READY' ? 'bg-success' :
-                readyState === 'ERROR' ? 'bg-danger' :
-                'bg-warning text-dark'
+                readyState === 'READY'
+                    ? 'bg-success'
+                    : readyState === 'ERROR'
+                        ? 'bg-danger'
+                        : 'bg-warning text-dark'
             );
         }
 
         if (stopF1Button) {
-            const showStop = ['STARTING', 'PLAYING', 'ENDING'].includes(readyState) || running;
+            const showStop =
+                ['STARTING', 'PLAYING', 'ENDING'].includes(readyState) ||
+                running;
+
             stopF1Button.classList.toggle('d-none', !showStop);
             stopF1Button.disabled = !showStop;
         }
 
-        // Handle completed session notification
-        if (state.last_completed_session_id && state.last_completed_session_id !== lastKnownCompletedId) {
+        if (
+            state.last_completed_session_id &&
+            state.last_completed_session_id !== lastKnownCompletedId
+        ) {
             lastKnownCompletedId = state.last_completed_session_id;
+
             if (sessionCompletedBanner) {
-                completedSessionText.textContent = `Session #${lastKnownCompletedId} completed!`;
+                completedSessionText.textContent =
+                    `Session #${lastKnownCompletedId} completed!`;
+
                 if (state.schedule_id) {
-                    viewLeaderboardBtn.href = `/leaderboard.php?schedule_id=${state.schedule_id}`;
+                    viewLeaderboardBtn.href =
+                        `/leaderboard.php?schedule_id=${state.schedule_id}`;
                 } else {
                     viewLeaderboardBtn.href = '/leaderboard.php';
                 }
+
                 sessionCompletedBanner.classList.remove('d-none');
             }
         }
@@ -302,26 +340,38 @@ include __DIR__ . '/../../includes/header.php';
 
     async function pollRigStatus() {
         try {
-            const response = await fetch('/api/session.php?action=status', {
-                method: 'GET',
-                headers: { 'Accept': 'application/json' }
-            });
+            const response = await fetch(
+                '/api/session.php?action=status',
+                {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                }
+            );
 
             const result = await response.json();
 
             if (!response.ok || !result.success) {
                 if (rigStatusBadge) {
-                    rigStatusBadge.textContent = `Rig status: ${result.error || 'Unable to reach rig status'}`;
+                    rigStatusBadge.textContent =
+                        `Rig status: ${result.error || 'Unable to reach rig status'}`;
+
                     rigStatusBadge.className = 'badge bg-danger';
                 }
+
                 return;
             }
 
             applyRigStatus(result.status || {});
+
         } catch (error) {
             console.error('Rig status poll failed:', error);
+
             if (rigStatusBadge) {
-                rigStatusBadge.textContent = 'Rig status: unable to contact rig';
+                rigStatusBadge.textContent =
+                    'Rig status: unable to contact rig';
+
                 rigStatusBadge.className = 'badge bg-danger';
             }
         }
@@ -331,7 +381,9 @@ include __DIR__ . '/../../includes/header.php';
         button.addEventListener('click', async function () {
             const scheduleId = this.dataset.scheduleId;
             const scheduleName = this.dataset.scheduleName;
-            const confirmed = confirm(`Start F1 for "${scheduleName}"?`);
+
+            const confirmed =
+                confirm(`Start F1 for "${scheduleName}"?`);
 
             if (!confirmed) {
                 return;
@@ -342,7 +394,11 @@ include __DIR__ . '/../../includes/header.php';
             try {
                 const response = await fetch('/api/session.php', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+
                     body: JSON.stringify({
                         api_key: 'changeme123',
                         schedule_id: Number(scheduleId),
@@ -353,54 +409,89 @@ include __DIR__ . '/../../includes/header.php';
                 });
 
                 const result = await response.json();
+
                 console.log('Session response:', result);
 
                 if (!response.ok || !result.success) {
-                    alert('Failed to start F1.\n\n' + (result.error || 'Unknown error'));
+                    alert(
+                        'Failed to start F1.\n\n' +
+                        (result.error || 'Unknown error')
+                    );
+
                     setAllStartButtonsState(false, 'Start F1');
                     return;
                 }
 
-                alert('F1 session started successfully!\n\nSession ID: ' + result.session_id);
+                alert(
+                    'F1 session started successfully!\n\n' +
+                    'Session ID: ' +
+                    result.session_id
+                );
 
                 if (rigStatusTimer) {
                     clearInterval(rigStatusTimer);
                 }
 
-                rigStatusTimer = setInterval(pollRigStatus, 2000);
+                rigStatusTimer =
+                    setInterval(pollRigStatus, 2000);
+
                 await pollRigStatus();
+
             } catch (error) {
                 console.error(error);
-                alert('Could not connect to the PHP server.');
+
+                alert(
+                    'Could not connect to the PHP server.'
+                );
+
                 setAllStartButtonsState(false, 'Start F1');
             }
         });
     });
 
     if (stopF1Button) {
-        stopF1Button.addEventListener('click', async function () {
-            try {
-                const response = await fetch('/api/stop_python.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+        stopF1Button.addEventListener(
+            'click',
+            async function () {
+                try {
+                    const response = await fetch(
+                        '/api/stop_python.php',
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        }
+                    );
 
-                const result = await response.json();
+                    const result = await response.json();
 
-                if (!response.ok || !result.success) {
-                    alert('Failed to stop F1.\n\n' + (result.error || 'Unknown error'));
-                    return;
+                    if (!response.ok || !result.success) {
+                        alert(
+                            'Failed to stop F1.\n\n' +
+                            (result.error || 'Unknown error')
+                        );
+
+                        return;
+                    }
+
+                    alert('F1 stop requested.');
+
+                    await pollRigStatus();
+
+                } catch (error) {
+                    console.error(error);
+
+                    alert(
+                        'Could not contact the rig stop endpoint.'
+                    );
                 }
-
-                alert('F1 stop requested.');
-                await pollRigStatus();
-            } catch (error) {
-                console.error(error);
-                alert('Could not contact the rig stop endpoint.');
             }
-        });
+        );
     }
 
     pollRigStatus();
-    rigStatusTimer = setInterval(pollRigStatus, 2000);
+
+    rigStatusTimer =
+        setInterval(pollRigStatus, 2000);
 </script>

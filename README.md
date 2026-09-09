@@ -1,5 +1,5 @@
 # TimeTracking-Autostart
-# F1 AutoStart — Event Management Panel
+# F1 AutoStart - Event Management Panel
 **v1.0 | SimStaff | Humber Polytechnic**
 
 ---

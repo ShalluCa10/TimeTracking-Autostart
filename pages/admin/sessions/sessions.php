@@ -98,7 +98,7 @@ function h(string $s): string
 <?php endif; ?>
 
 <div class="page-header">
-    <h2>Sessions — <?= h($activeScheduleName) ?></h2>
+    <h2>Sessions - <?= h($activeScheduleName) ?></h2>
 </div>
 
 <!-- Filter Bar -->
@@ -157,12 +157,12 @@ function h(string $s): string
                                 </td>
                                 <td>
                                     <a href="sessions.php?schedule_id=<?= (int) $s['schedule_id'] ?>" class="table-link">
-                                        <?= h($s['schedule_name'] ?? '—') ?>
+                                        <?= h($s['schedule_name'] ?? '-') ?>
                                     </a>
                                 </td>
-                                <td><?= h($s['participant_name'] ?? '—') ?></td>
-                                <td><strong><?= $s['best_lap_time'] !== '' ? h($s['best_lap_time']) : '—' ?></strong></td>
-                                <td><?= $s['created_at'] ? date('M j, Y', strtotime($s['created_at'])) : '—' ?></td>
+                                <td><?= h($s['participant_name'] ?? '-') ?></td>
+                                <td><strong><?= $s['best_lap_time'] !== '' ? h($s['best_lap_time']) : '-' ?></strong></td>
+                                <td><?= $s['created_at'] ? date('M j, Y', strtotime($s['created_at'])) : '-' ?></td>
                                 <td>
                                     <a href="session_form.php?id=<?= (int) $s['session_id'] ?>&schedule_id=<?= (int) $s['schedule_id'] ?>"
                                         class="btn btn-secondary btn-sm">Edit</a>

@@ -23,7 +23,7 @@ if ($action === 'create') {
 
     // Pull selected options from the schedule
     $stmt = $conn->prepare('
-        SELECT e.team AS car, e.event AS track, e.racer, gv.name AS f1_version, e.timer_minutes
+        SELECT e.team AS car, e.event AS track, e.racer, e.formula, e.assist, gv.name AS f1_version, e.timer_minutes
         FROM schedules e
         LEFT JOIN game_versions gv ON gv.id = e.version_id
         WHERE e.schedule_id = ?
@@ -42,20 +42,116 @@ if ($action === 'create') {
     $car = $schedule['car'] ?? '';
     $track = $schedule['track'] ?? '';
     $racer = $schedule['racer'] ?? '';
+    $formula = $schedule['formula'] ?? '';
+    $assist = $schedule['assist'] ?? '';
     $f1Version = $schedule['f1_version'] ?? '';
     $timerMinutes = $schedule['timer_minutes'] !== null ? (int) $schedule['timer_minutes'] : null;
 
     $stmt = $conn->prepare('
-        INSERT INTO sessions (schedule_id, participant_name, f1_version, team, event, best_lap_time, timer_minutes)
-        VALUES (?, ?, ?, ?, ?, \'\', ?)
+        INSERT INTO sessions (schedule_id, participant_name, f1_version, formula, assist, team, event, best_lap_time, timer_minutes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, \'\', ?)
     ');
-    $stmt->bind_param('issssi', $scheduleId, $racer, $f1Version, $car, $track, $timerMinutes);
+    $stmt->bind_param('isssssi', $scheduleId, $racer, $f1Version, $formula, $assist, $car, $track, $timerMinutes);
     $stmt->execute();
     $sessionId = $stmt->insert_id;
     $stmt->close();
     $conn->close();
 
     echo json_encode(['session_id' => $sessionId, 'timer_minutes' => $timerMinutes]);
+    exit();
+}
+
+// START PYTHON (same rig-start call the dashboard's "Start F1" button makes)
+if ($action === 'start_python') {
+    $sessionId = (int) ($data['session_id'] ?? 0);
+
+    if ($sessionId === 0) {
+        echo json_encode(['success' => false, 'error' => 'session_id is required.']);
+        exit();
+    }
+
+    $stmt = $conn->prepare('
+        SELECT session_id, schedule_id, participant_name, f1_version, formula, assist, team, event, timer_minutes
+        FROM sessions
+        WHERE session_id = ?
+        LIMIT 1
+    ');
+    $stmt->bind_param('i', $sessionId);
+    $stmt->execute();
+    $session = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    $conn->close();
+
+    if (!$session) {
+        echo json_encode(['success' => false, 'error' => 'Session not found.']);
+        exit();
+    }
+
+    if (empty($session['formula']) || empty($session['assist'])) {
+        echo json_encode([
+            'success' => false,
+            'session_id' => $sessionId,
+            'error' => 'Session is missing formula/assist configuration.',
+        ]);
+        exit();
+    }
+
+    $statusResult = callPython('GET', '/status');
+
+    if (!$statusResult['ok']) {
+        echo json_encode([
+            'success' => false,
+            'session_id' => $sessionId,
+            'error' => $statusResult['error'] ?? 'Python status check failed',
+        ]);
+        exit();
+    }
+
+    $status = $statusResult['response'];
+
+    if (($status['state'] ?? null) !== 'READY' || !empty($status['running'])) {
+        echo json_encode([
+            'success' => false,
+            'session_id' => $sessionId,
+            'error' => 'Python reports the rig is busy',
+            'python_status' => $status,
+        ]);
+        exit();
+    }
+
+    $durationSeconds = $session['timer_minutes'] !== null ? ((int) $session['timer_minutes'] * 60) : 300;
+
+    $pythonPayload = [
+        'session_id' => $session['session_id'],
+        'schedule_id' => $session['schedule_id'],
+        'participant_name' => $session['participant_name'],
+        'f1_version' => $session['f1_version'],
+        'game_version' => $session['f1_version'],
+        'formula' => $session['formula'],
+        'assist' => $session['assist'],
+        'team' => $session['team'],
+        'track' => $session['event'],
+        'duration_seconds' => $durationSeconds,
+    ];
+
+    $startResult = callPython('POST', '/start', $pythonPayload);
+
+    if (!$startResult['ok']) {
+        echo json_encode([
+            'success' => false,
+            'session_id' => $sessionId,
+            'error' => $startResult['error'] ?? 'Python start request failed',
+            'python_status' => $status,
+        ]);
+        exit();
+    }
+
+    echo json_encode([
+        'success' => true,
+        'session_id' => $sessionId,
+        'python' => $startResult['response'],
+        'python_status' => $status,
+    ]);
     exit();
 }
 

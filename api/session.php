@@ -8,78 +8,10 @@
 
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/helpers.php';
 
 header('Content-Type: application/json');
 $conn = getConnection();
-
-function callPython(string $method, string $path, ?array $payload = null, int $timeoutSeconds = 5): array
-{
-    $method = strtoupper($method);
-    $url = 'http://127.0.0.1:5000' . $path;
-    $ch = curl_init($url);
-
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_CONNECTTIMEOUT => max(1, min(2, $timeoutSeconds)),
-        CURLOPT_TIMEOUT => max(1, $timeoutSeconds),
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-        CURLOPT_CUSTOMREQUEST => $method,
-    ]);
-
-    if ($method === 'POST' && $payload !== null) {
-        $body = json_encode($payload);
-        if ($body === false) {
-            curl_close($ch);
-            return [
-                'ok' => false,
-                'http_code' => 0,
-                'error' => 'Python payload could not be encoded as JSON',
-                'details' => json_last_error_msg(),
-                'response' => null,
-                'raw_response' => null,
-            ];
-        }
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-    }
-
-    $rawResponse = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($ch);
-    curl_close($ch);
-
-    if ($rawResponse === false) {
-        return [
-            'ok' => false,
-            'http_code' => 500,
-            'error' => 'Python could not be reached',
-            'details' => $curlError !== '' ? $curlError : 'cURL request failed',
-            'raw_response' => null,
-            'response' => null,
-        ];
-    }
-
-    $decoded = json_decode($rawResponse, true);
-
-    if ($httpCode >= 400 || !is_array($decoded)) {
-        return [
-            'ok' => false,
-            'http_code' => $httpCode >= 400 ? $httpCode : 500,
-            'error' => $httpCode >= 400 ? 'Python returned an HTTP error' : 'Python returned invalid JSON',
-            'details' => null,
-            'raw_response' => $rawResponse,
-            'response' => is_array($decoded) ? $decoded : null,
-        ];
-    }
-
-    return [
-        'ok' => true,
-        'http_code' => $httpCode,
-        'error' => null,
-        'details' => null,
-        'raw_response' => $rawResponse,
-        'response' => $decoded,
-    ];
-}
 
 function quoteForCmd(string $value): string
 {
@@ -432,40 +364,6 @@ if (($data['api_key'] ?? '') !== 'changeme123') {
     exit();
 }
 
-// ── Complete Session Action ──
-if (($data['action'] ?? '') === 'complete' && !empty($data['session_id'])) {
-    $completeSessionId = (int) $data['session_id'];
-    $stmt = $conn->prepare("UPDATE sessions SET status = 'completed' WHERE session_id = ?");
-    $stmt->bind_param('i', $completeSessionId);
-    $stmt->execute();
-    $stmt->close();
-    $conn->close();
-
-    echo json_encode([
-        'success' => true,
-        'message' => 'Session marked completed',
-        'session_id' => $completeSessionId,
-    ]);
-    exit();
-}
-
-// ── Fail Session Action ──
-if (($data['action'] ?? '') === 'fail' && !empty($data['session_id'])) {
-    $failSessionId = (int) $data['session_id'];
-    $stmt = $conn->prepare("UPDATE sessions SET status = 'failed' WHERE session_id = ?");
-    $stmt->bind_param('i', $failSessionId);
-    $stmt->execute();
-    $stmt->close();
-    $conn->close();
-
-    echo json_encode([
-        'success' => true,
-        'message' => 'Session marked failed',
-        'session_id' => $failSessionId,
-    ]);
-    exit();
-}
-
 $scheduleId = (int) ($data['schedule_id'] ?? 0);
 $participantName = trim($data['participant_name'] ?? '');
 $f1Version = trim($data['f1_version'] ?? '');
@@ -480,27 +378,33 @@ if ($scheduleId === 0 || $participantName === '') {
     exit();
 }
 
-$pythonReady = ensurePythonApiRunning();
-if (!$pythonReady['ok']) {
-    pythonAutostartLog('FAILED: ' . ($pythonReady['error'] ?? 'unknown') . ' ' . ($pythonReady['details'] ?? ''));
+/*
+|--------------------------------------------------------------------------
+| Make sure the Python rig-automation service is up before we go any further
+|--------------------------------------------------------------------------
+*/
+
+$autostart = ensurePythonApiRunning();
+
+if (!$autostart['ok']) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
         'error' => 'Python automation service could not be started.',
-        'python_error' => $pythonReady['error'] ?? null,
-        'details' => $pythonReady['details'] ?? null,
+        'python_error' => $autostart['error'],
+        'details' => $autostart['details'],
     ]);
     exit();
 }
 
 /*
 |--------------------------------------------------------------------------
-| Get team, track, formula and assist from the selected schedule
+| Get team, track, formula, assist and game version from the selected schedule
 |--------------------------------------------------------------------------
 */
 
 $scheduleStmt = $conn->prepare(
-    'SELECT s.team, s.event, s.racer, s.formula, s.assist, gv.name AS game_version
+    'SELECT s.team, s.event, s.racer, s.formula, s.assist, s.version_id, gv.name AS game_version
      FROM schedules s
      LEFT JOIN game_versions gv ON gv.id = s.version_id
      WHERE s.schedule_id = ?
@@ -529,75 +433,11 @@ $formula = trim($schedule['formula'] ?? '');
 $assist = trim($schedule['assist'] ?? '');
 $gameVersion = trim($schedule['game_version'] ?? '') ?: $f1Version;
 
-// Validate required automation fields - never silently default formula/assist here;
-// an empty value means the schedule itself is misconfigured (see Issue 3 dropdown fix).
-if (empty($car)) {
+if ($formula === '' || $assist === '') {
     http_response_code(400);
     echo json_encode([
         'success' => false,
-        'error' => 'Schedule is missing team'
-    ]);
-    exit();
-}
-
-if (empty($track)) {
-    http_response_code(400);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Schedule is missing event/track'
-    ]);
-    exit();
-}
-
-if (empty($formula)) {
-    http_response_code(400);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Schedule is missing formula (F1/F2). Edit the schedule and re-save it.'
-    ]);
-    exit();
-}
-
-if (empty($assist)) {
-    http_response_code(400);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Schedule is missing assist level. Edit the schedule and re-save it.'
-    ]);
-    exit();
-}
-
-/*
-|--------------------------------------------------------------------------
-| Check Python status before starting to prevent duplicate sessions
-|--------------------------------------------------------------------------
-*/
-
-$statusResult = callPython('GET', '/status');
-
-if (!$statusResult['ok']) {
-    http_response_code($statusResult['http_code'] >= 400 ? $statusResult['http_code'] : 500);
-    echo json_encode([
-        'success' => false,
-        'error' => $statusResult['error'] ?? 'Python status check failed',
-        'python_response' => $statusResult['response'] ?? null,
-        'python_raw_response' => $statusResult['raw_response'] ?? null,
-        'python_error' => $statusResult['details'] ?? null,
-    ]);
-    exit();
-}
-
-$status = $statusResult['response'];
-$pythonState = $status['state'] ?? 'UNKNOWN';
-
-// STARTING / PLAYING / ENDING (or Python reporting running) means a session
-// is already active - never start a second one.
-if (!empty($status['running']) || in_array($pythonState, ['STARTING', 'PLAYING', 'ENDING'], true)) {
-    http_response_code(409);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Rig is currently busy.',
-        'python_status' => $status,
+        'error' => 'Schedule is missing formula/assist configuration. Edit the schedule and set both before starting F1.'
     ]);
     exit();
 }
@@ -609,16 +449,16 @@ if (!empty($status['running']) || in_array($pythonState, ['STARTING', 'PLAYING',
 */
 
 $stmt = $conn->prepare(
-    "INSERT INTO sessions
-    (schedule_id, participant_name, f1_version, formula, assist, team, event, best_lap_time, timer_minutes, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 5, 'running')"
+    'INSERT INTO sessions
+    (schedule_id, participant_name, f1_version, formula, assist, team, event, best_lap_time)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
 );
 
 $stmt->bind_param(
     'isssssss',
     $scheduleId,
     $participantName,
-    $f1Version,
+    $gameVersion,
     $formula,
     $assist,
     $car,
@@ -635,7 +475,41 @@ $conn->close();
 
 /*
 |--------------------------------------------------------------------------
-| 2. Send session information to Python
+| 2. Check Python status before starting the session
+|--------------------------------------------------------------------------
+*/
+
+$statusResult = callPython('GET', '/status');
+
+if (!$statusResult['ok']) {
+    http_response_code($statusResult['http_code'] >= 400 ? $statusResult['http_code'] : 500);
+    echo json_encode([
+        'success' => false,
+        'session_id' => $newId,
+        'error' => $statusResult['error'] ?? 'Python status check failed',
+        'python_response' => $statusResult['response'] ?? null,
+        'python_raw_response' => $statusResult['raw_response'] ?? null,
+        'python_error' => $statusResult['details'] ?? null,
+    ]);
+    exit();
+}
+
+$status = $statusResult['response'];
+
+if (($status['state'] ?? null) !== 'READY' || !empty($status['running'])) {
+    http_response_code(409);
+    echo json_encode([
+        'success' => false,
+        'session_id' => $newId,
+        'error' => 'Python reports the rig is busy',
+        'python_status' => $status,
+    ]);
+    exit();
+}
+
+/*
+|--------------------------------------------------------------------------
+| 3. Send session information to Python
 |--------------------------------------------------------------------------
 */
 
@@ -643,8 +517,8 @@ $pythonPayload = [
     'session_id' => $newId,
     'schedule_id' => $scheduleId,
     'participant_name' => $participantName,
-    'game_version' => $gameVersion,
     'f1_version' => $gameVersion,
+    'game_version' => $gameVersion,
     'formula' => $formula,
     'assist' => $assist,
     'team' => $car,
@@ -657,14 +531,6 @@ error_log('[SESSION START] ' . json_encode($pythonPayload));
 $startResult = callPython('POST', '/start', $pythonPayload);
 
 if (!$startResult['ok']) {
-    // Mark session failed in DB
-    $failConn = getConnection();
-    $failStmt = $failConn->prepare("UPDATE sessions SET status = 'failed' WHERE session_id = ?");
-    $failStmt->bind_param('i', $newId);
-    $failStmt->execute();
-    $failStmt->close();
-    $failConn->close();
-
     http_response_code($startResult['http_code'] >= 400 ? $startResult['http_code'] : 500);
     echo json_encode([
         'success' => false,
@@ -680,17 +546,50 @@ if (!$startResult['ok']) {
 
 /*
 |--------------------------------------------------------------------------
-| 3. Return combined result
+| 4. Return combined result
 |--------------------------------------------------------------------------
 */
 
 echo json_encode([
     'success' => true,
     'session_id' => $newId,
-    'status' => 'running',
     'python' => $startResult['response'],
     'python_status' => $status,
 ]);
-exit();
+// if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+//     http_response_code(405);
+//     echo json_encode(['error' => 'Method not allowed']);
+//     exit();
+// }
+
+// $data = json_decode(file_get_contents('php://input'), true);
+
+// if (($data['api_key'] ?? '') !== 'changeme123') {
+//     http_response_code(401);
+//     echo json_encode(['error' => 'Unauthorized']);
+//     exit();
+// }
+
+// $scheduleId = (int) ($data['schedule_id'] ?? 0);
+// $participantName = trim($data['participant_name'] ?? '');
+// $f1Version = trim($data['f1_version'] ?? '');
+// $car = trim($data['car'] ?? '');
+// $track = trim($data['track'] ?? '');
+// $bestLapTime = trim($data['best_lap_time'] ?? ''); 
+
+// if ($scheduleId === 0 || $participantName === '') {
+//     http_response_code(400);
+//     echo json_encode(['error' => 'schedule_id and participant_name are required']);
+//     exit();
+// }
+
+// $stmt = $conn->prepare(
+//     'INSERT INTO sessions (schedule_id, participant_name, f1_version, team, event, best_lap_time) VALUES (?, ?, ?, ?, ?, ?)'
+// );
+// $stmt->bind_param('isssss', $scheduleId, $participantName, $f1Version, $car, $track, $bestLapTime);
+// $stmt->execute();
+// $newId = $stmt->insert_id;
+// $stmt->close();
+// $conn->close();
 
 // echo json_encode(['success' => true, 'session_id' => $newId]);
