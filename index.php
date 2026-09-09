@@ -30,9 +30,9 @@
 
                 <div class="col-12 col-sm-8 col-md-4">
                     <div class="card h-100 border-0 bg-dark bg-opacity-75 text-start p-4 d-flex flex-column">
-                        <h3 class="mb-2">Simulator</h3>
-                        <p class="text-light opacity-75">Start a new session and record lap times in the simulator.</p>
-                        <a href="/pages/simulation.php" class="btn btn-danger mt-auto">Open Simulator</a>
+                        <h3 class="mb-2">Controller</h3>
+                        <p class="text-light opacity-75">Start a session and record time for every laps.</p>
+                        <a href="/pages/simulation.php" class="btn btn-danger mt-auto">Open Controller</a>
                     </div>
                 </div>
 

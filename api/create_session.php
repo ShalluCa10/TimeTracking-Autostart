@@ -59,6 +59,88 @@ if ($action === 'create') {
     exit();
 }
 
+// START PYTHON (same rig-start call the dashboard's "Start F1" button makes)
+if ($action === 'start_python') {
+    $sessionId = (int) ($data['session_id'] ?? 0);
+
+    if ($sessionId === 0) {
+        echo json_encode(['success' => false, 'error' => 'session_id is required.']);
+        exit();
+    }
+
+    $stmt = $conn->prepare('
+        SELECT session_id, schedule_id, participant_name, f1_version, team, event, timer_minutes
+        FROM sessions
+        WHERE session_id = ?
+        LIMIT 1
+    ');
+    $stmt->bind_param('i', $sessionId);
+    $stmt->execute();
+    $session = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    $conn->close();
+
+    if (!$session) {
+        echo json_encode(['success' => false, 'error' => 'Session not found.']);
+        exit();
+    }
+
+    $statusResult = callPython('GET', '/status');
+
+    if (!$statusResult['ok']) {
+        echo json_encode([
+            'success' => false,
+            'session_id' => $sessionId,
+            'error' => $statusResult['error'] ?? 'Python status check failed',
+        ]);
+        exit();
+    }
+
+    $status = $statusResult['response'];
+
+    if (($status['state'] ?? null) !== 'READY' || !empty($status['running'])) {
+        echo json_encode([
+            'success' => false,
+            'session_id' => $sessionId,
+            'error' => 'Python reports the rig is busy',
+            'python_status' => $status,
+        ]);
+        exit();
+    }
+
+    $durationSeconds = $session['timer_minutes'] !== null ? ((int) $session['timer_minutes'] * 60) : 300;
+
+    $pythonPayload = [
+        'session_id' => $session['session_id'],
+        'schedule_id' => $session['schedule_id'],
+        'participant_name' => $session['participant_name'],
+        'f1_version' => $session['f1_version'],
+        'team' => $session['team'],
+        'track' => $session['event'],
+        'duration_seconds' => $durationSeconds,
+    ];
+
+    $startResult = callPython('POST', '/start', $pythonPayload);
+
+    if (!$startResult['ok']) {
+        echo json_encode([
+            'success' => false,
+            'session_id' => $sessionId,
+            'error' => $startResult['error'] ?? 'Python start request failed',
+            'python_status' => $status,
+        ]);
+        exit();
+    }
+
+    echo json_encode([
+        'success' => true,
+        'session_id' => $sessionId,
+        'python' => $startResult['response'],
+        'python_status' => $status,
+    ]);
+    exit();
+}
+
 // SAVE LAP
 if ($action === 'save_lap') {
     $sessionId = (int) ($data['session_id'] ?? 0);

@@ -166,9 +166,43 @@ function runMimicry(config) {
 btnStart.addEventListener('click', async function () {
     if (running) return;
 
+    const sessionId = new URLSearchParams(window.location.search).get('session_id');
+    if (!sessionId) {
+        alert('Create a session first!');
+        return;
+    }
+
     // Grab event data from the selector (may be null if session was pre-loaded via URL)
-    const sel = document.getElementById('sel-event');
+    const sel = document.getElementById('sel-schedule');
     const opt = sel ? sel.options[sel.selectedIndex] : null;
+
+    btnStart.disabled = true;
+    const originalLabel = btnStart.textContent;
+    btnStart.textContent = 'Starting...';
+
+    // ── Same rig-start call the dashboard's "Start F1" button makes ──
+    try {
+        const res = await fetch('/api/create_session.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'start_python', session_id: parseInt(sessionId, 10) }),
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            alert('Failed to start F1.\n\n' + (data.error || 'Unknown error'));
+            btnStart.disabled = false;
+            btnStart.textContent = originalLabel;
+            return;
+        }
+    } catch (e) {
+        alert('Could not connect to the PHP server.');
+        btnStart.disabled = false;
+        btnStart.textContent = originalLabel;
+        return;
+    }
+
+    btnStart.textContent = originalLabel;
 
     await runMimicry({
         racer: opt?.dataset.racer ?? 'Racer',

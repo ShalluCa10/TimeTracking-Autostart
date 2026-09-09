@@ -29,7 +29,7 @@ if ($sessionId > 0) {
 
 $conn->close();
 
-$pageTitle = 'Simulator';
+$pageTitle = 'Controller';
 include __DIR__ . '/../includes/public_header.php';
 ?>
 
@@ -37,7 +37,7 @@ include __DIR__ . '/../includes/public_header.php';
 
 <div class="sim-wrapper py-4">
 
-    <h1 class="sim-title">F1 LAP SIMULATOR</h1>
+    <h1 class="sim-title">Event Controller</h1>
     <p class="sim-subtitle" id="simSubtitle">
         Session #<?= $sessionId ?> &nbsp;|&nbsp; Schedule #<?= $scheduleId ?>
     </p>
@@ -206,6 +206,6 @@ include __DIR__ . '/../includes/public_header.php';
     })();
 </script>
 
-<!-- <script src="/assets/js/simulation.js"></script> -->
+<script src="/assets/js/simulation.js"></script>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

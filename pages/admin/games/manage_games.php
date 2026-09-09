@@ -107,7 +107,7 @@ if ($activeVersionId > 0) {
 
 $conn->close();
 
-$pageTitle = 'Manage Game';
+$pageTitle = 'Manage Games';
 include __DIR__ . '/../../../includes/header.php';
 ?>
 
@@ -121,7 +121,7 @@ include __DIR__ . '/../../../includes/header.php';
 
 <!-- Page Header -->
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-    <h2 class="h4 fw-bold text-uppercase mb-0">Manage Game</h2>
+    <h2 class="h4 fw-bold text-uppercase mb-0">Manage Games</h2>
     <a href="../dashboard.php" class="btn btn-secondary">← Back to Dashboard</a>
 </div>
 

@@ -1,5 +1,77 @@
 <?php
 
+// ── Python Rig Bridge ─────────────────────────────────────────────────────────
+
+function callPython(string $method, string $path, ?array $payload = null): array
+{
+    $url = 'http://127.0.0.1:5000' . $path;
+    $ch = curl_init($url);
+
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 5,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_CUSTOMREQUEST => $method,
+    ]);
+
+    if ($method === 'POST' && $payload !== null) {
+        $body = json_encode($payload);
+        if ($body === false) {
+            curl_close($ch);
+            return [
+                'ok' => false,
+                'http_code' => 0,
+                'error' => 'Python payload could not be encoded as JSON',
+                'details' => json_last_error_msg(),
+            ];
+        }
+
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+    }
+
+    $responseBody = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+
+    curl_close($ch);
+
+    if ($responseBody === false) {
+        return [
+            'ok' => false,
+            'http_code' => 0,
+            'error' => 'Python cannot be reached',
+            'details' => $curlError !== '' ? $curlError : 'cURL request failed',
+        ];
+    }
+
+    $decoded = json_decode($responseBody, true);
+
+    if ($httpCode >= 400) {
+        return [
+            'ok' => false,
+            'http_code' => $httpCode,
+            'error' => 'Python returned an HTTP error',
+            'response' => is_array($decoded) ? $decoded : null,
+            'raw_response' => $responseBody,
+        ];
+    }
+
+    if (!is_array($decoded)) {
+        return [
+            'ok' => false,
+            'http_code' => $httpCode,
+            'error' => 'Python returned invalid JSON',
+            'raw_response' => $responseBody,
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'http_code' => $httpCode,
+        'response' => $decoded,
+    ];
+}
+
 // ── Flash ─────────────────────────────────────────────────────────────────────
 
 function setFlash(string $type, string $message): void
